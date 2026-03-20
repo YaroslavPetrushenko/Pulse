@@ -1,395 +1,1303 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-<meta charset="UTF-8">
-<title>Pulse Messenger</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:system-ui, sans-serif; background:#f2f2f2; }
-
-    .screen { display:none; padding:16px; max-width:600px; margin:0 auto; }
-    .screen.active { display:block; }
-
-    h2, h3 { margin:8px 0 12px; }
-
-    input, button {
-        width:100%; padding:12px; margin:6px 0 10px;
-        font-size:16px; border-radius:10px; border:1px solid #ccc;
-        outline:none; transition:0.15s;
+  <meta charset="UTF-8">
+  <title>Messenger</title>
+  <style>
+    :root {
+      --bg: #111;
+      --panel: #181818;
+      --panel-light: #202020;
+      --accent: #1e88e5;
+      --accent-soft: #1565c0;
+      --border: #333;
+      --text: #eee;
+      --text-soft: #aaa;
+      --dev: #ffb300;
     }
-    input:focus { border-color:#0088ff; box-shadow:0 0 0 1px #0088ff33; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .screen {
+      display: none;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .centered {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 8px;
+      font-weight: 500;
+    }
+
+    input,
+    select,
     button {
-        background:#0088ff; color:white; border:none; font-weight:600;
-        cursor:pointer;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
     }
 
-    #chat-list .chat-item {
-        padding:10px 12px; background:white; margin-bottom:6px;
-        border-radius:10px; cursor:pointer;
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
     }
 
-    #messages {
-        height:50vh; overflow-y:auto; padding:10px;
-        background:white; border-radius:10px; margin-bottom:8px;
+    button {
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
     }
 
-    .msg {
-        padding:8px 12px; margin:4px 0; border-radius:12px;
-        max-width:75%; word-wrap:break-word;
-    }
-    .me { background:#d1eaff; margin-left:auto; }
-    .them { background:#e8e8e8; margin-right:auto; }
-
-    #search-results .search-item {
-        padding:8px 10px; background:white; margin:4px 0;
-        border-radius:10px; cursor:pointer;
+    button:hover {
+      background: var(--accent-soft);
     }
 
-    .top-bar {
-        display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:10px;
+    .field-label {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-bottom: 4px;
     }
-    .top-title { font-size:20px; font-weight:700; }
-    .small-link { font-size:13px; color:#007bff; cursor:pointer; }
 
-    .row { display:flex; gap:6px; }
-    .row input { flex:1; }
-    .row button { width:auto; padding:10px 14px; }
-</style>
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 280px;
+    }
+
+    .phone-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #000;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 0 10px;
+    }
+
+    .phone-code {
+      color: var(--text-soft);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .phone-input {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      padding: 10px 0;
+      flex: 1;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-soft);
+      max-width: 280px;
+      text-align: center;
+    }
+
+    .link {
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    #screen-main {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .sidebar {
+      width: 320px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-title {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .sidebar-user {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .sidebar-user-dev {
+      color: var(--dev);
+      font-weight: 500;
+    }
+
+    .search-box {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .section-label {
+      padding: 4px 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+
+    .chat-item {
+      padding: 8px 10px;
+      display: flex;
+      gap: 8px;
+      cursor: pointer;
+      align-items: center;
+    }
+
+    .chat-item:hover {
+      background: var(--panel-light);
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .chat-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .chat-name {
+      font-weight: 500;
+    }
+
+    .chat-name-dev {
+      color: var(--dev);
+    }
+
+    .chat-time {
+      color: var(--text-soft);
+      font-size: 11px;
+    }
+
+    .chat-bottom {
+      font-size: 12px;
+      color: var(--text-soft);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .main-panel {
+      flex: 1;
+      background: #101010;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-header {
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .main-header-title {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .main-header-title-dev {
+      color: var(--dev);
+    }
+
+    .main-header-sub {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .main-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 10px 12px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .msg-row {
+      margin-bottom: 6px;
+      display: flex;
+    }
+
+    .msg-row.me {
+      justify-content: flex-end;
+    }
+
+    .msg-bubble {
+      max-width: 60%;
+      padding: 6px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .msg-row.me .msg-bubble {
+      background: var(--accent);
+    }
+
+    .msg-row.other .msg-bubble {
+      background: var(--panel-light);
+    }
+
+    .composer {
+      border-top: 1px solid var(--border);
+      padding: 8px 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .composer-input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .composer-btn {
+      padding: 8px 14px;
+      border-radius: 16px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .composer-btn:hover {
+      background: var(--accent-soft);
+    }
+
+    .back-link {
+      font-size: 12px;
+      color: var(--text-soft);
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .username-status-error {
+      color: #f44336;
+    }
+
+    .username-status-ok {
+      color: #4caf50;
+    }
+
+    .username-status-dev {
+      color: var(--dev);
+      font-weight: 500;
+    }
+
+    .chat-name-dev {
+      color: #ff8c00;
+      font-weight: 600;
+    }
+
+    .chat-name-natasha {
+      color: #ff4fa3;
+      font-weight: 600;
+    }
+
+    .chat-name-normal {
+      color: var(--text-soft);
+    }
+
+    /* ===== MOBILE ADAPTATION ===== */
+    @media (max-width: 768px) {
+
+      #mobileHeader {
+        display: flex !important;
+      }
+
+      #sidebar {
+        width: 100% !important;
+        border-right: none !important;
+      }
+
+      #screen-main {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100% !important;
+      }
+
+      .main-panel {
+        display: none;
+        width: 100%;
+      }
+
+      #backBtnMobile {
+        display: block !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<!-- ЭКРАН ВВОДА НОМЕРА -->
-<div id="screen-phone" class="screen active">
-    <div class="top-bar">
-        <div class="top-title">Pulse</div>
+  <!-- MOBILE HEADER (Pulse, без картинок) -->
+  <div id="mobileHeader" style="
+  display:none;
+  align-items:center;
+  padding:10px 14px;
+  background:#1f1f1f;
+  height:56px;
+  border-bottom:1px solid #2a2a2a;
+">
+    <div style="font-size:20px;font-weight:600;">Pulse</div>
+  </div>
+
+  <!-- MOBILE SEARCH (оставлен, но скрыт) -->
+  <div id="mobileSearch" style="display:none;padding:10px;background:#1f1f1f;border-bottom:1px solid #2a2a2a;">
+    <input id="mobileSearchInput" placeholder="Поиск" style="
+    width:100%;
+    padding:10px 14px;
+    border-radius:10px;
+    border:none;
+    background:#2a2a2a;
+    color:white;
+    font-size:16px;
+  ">
+  </div>
+
+  <!-- ЭКРАН 1: ТЕЛЕФОН -->
+  <div id="screen-phone" class="screen centered">
+    <h2>Вход по номеру телефона</h2>
+
+    <div class="field-group">
+      <div class="field-label">Страна</div>
+      <select id="countrySelect">
+        <option value="ru" data-code="+7">🇷🇺 Россия (+7)</option>
+        <option value="de" data-code="+49">🇩🇪 Германия (+49)</option>
+        <option value="ua" data-code="+380">🇺🇦 Украина (+380)</option>
+        <option value="kz" data-code="+7">🇰🇿 Казахстан (+7)</option>
+        <option value="us" data-code="+1">🇺🇸 США (+1)</option>
+      </select>
     </div>
-    <h2>Вход по номеру</h2>
-    <input id="phoneInput" placeholder="+79991234567">
-    <button id="btnPhoneNext">Продолжить</button>
-</div>
 
-<!-- ЭКРАН ВХОДА -->
-<div id="screen-auth" class="screen">
-    <div class="top-bar">
-        <div class="top-title">Вход</div>
-        <div class="small-link" id="authChangePhone">Сменить номер</div>
-    </div>
-    <p id="authPhoneLabel"></p>
-    <input id="authPassword" type="password" placeholder="Пароль">
-    <button id="btnLogin">Войти</button>
-</div>
-
-<!-- ЭКРАН РЕГИСТРАЦИИ -->
-<div id="screen-register" class="screen">
-    <div class="top-bar">
-        <div class="top-title">Регистрация</div>
-        <div class="small-link" id="regChangePhone">Сменить номер</div>
-    </div>
-    <p id="regPhoneLabel"></p>
-    <input id="regName" placeholder="Имя">
-    <input id="regUsername" placeholder="username">
-    <input id="regPassword" type="password" placeholder="Пароль">
-    <button id="btnRegister">Создать аккаунт</button>
-</div>
-
-<!-- ГЛАВНЫЙ ЭКРАН -->
-<div id="screen-main" class="screen">
-    <div class="top-bar">
-        <div class="top-title">Pulse</div>
-        <div class="small-link" id="btnLogout">Выйти</div>
+    <div class="field-group">
+      <div class="field-label">Телефон</div>
+      <div class="phone-wrapper">
+        <span id="phoneCode" class="phone-code">+7</span>
+        <input id="phoneLocal" class="phone-input" placeholder="900 000-00-00">
+      </div>
     </div>
 
-    <input id="searchInput" placeholder="Поиск людей...">
-    <div id="search-results"></div>
+    <button id="btnPhoneNext" style="width:280px;">Далее</button>
+    <div class="hint">Мы используем номер телефона для входа или регистрации.</div>
+  </div>
 
-    <h3>Чаты</h3>
-    <div id="chat-list"></div>
+  <!-- ЭКРАН 2: ЛОГИН / РЕГИСТРАЦИЯ -->
+  <div id="screen-auth" class="screen centered">
+    <h2 id="authTitle">Вход</h2>
+    <div id="authPhoneText" class="hint"></div>
 
-    <h3 id="chat-title">Выберите чат</h3>
-    <div id="messages"></div>
-
-    <div class="row">
-        <input id="msgInput" placeholder="Сообщение...">
-        <button id="msgSend">➤</button>
+    <div id="authExisting" style="display:none; flex-direction:column; gap:12px; align-items:center;">
+      <div class="field-group">
+        <div class="field-label">Пароль</div>
+        <input id="authPassword" type="password" placeholder="Пароль">
+      </div>
+      <button id="btnLogin" style="width:280px;">Войти</button>
+      <div class="back-link" id="backToPhone1">Изменить номер</div>
     </div>
-</div>
 
-<script>
-// ------------------ КОНФИГ ------------------
-const API = "https://pulse-production-1a74.up.railway.app";
-const WS_URL = "wss://pulse-production-1a74.up.railway.app";
+    <div id="authNew" style="display:none; flex-direction:column; gap:12px; align-items:center;">
+      <div class="field-group">
+        <div class="field-label">Имя</div>
+        <input id="regName" placeholder="Как вас называть">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Имя пользователя (@username)</div>
+        <input id="regUsername" placeholder="например: yaroslav">
+        <div id="usernameStatus" style="font-size:12px; margin-top:2px;"></div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Пароль</div>
+        <input id="regPassword" type="password" placeholder="Придумайте пароль">
+      </div>
+      <button id="btnRegister" style="width:280px;">Зарегистрироваться</button>
+      <div class="back-link" id="backToPhone2">Изменить номер</div>
+    </div>
+  </div>
 
-let currentUser = null;
-let currentChat = null;
-let ws = null;
-let fullPhone = "";
+  <!-- ЭКРАН 3: ОСНОВНОЙ -->
+  <div id="screen-main" class="screen">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div>
+          <div class="sidebar-title">Messenger</div>
+          <div class="sidebar-user" id="sidebarUser"></div>
+        </div>
+        <div class="link" id="logoutLink">Выйти</div>
+      </div>
+      <div class="search-box">
+        <input id="searchInput" class="search-input" placeholder="Поиск (@user, имя, текст)">
+      </div>
+      <div id="chatList" class="chat-list">
+        У вас пока нет чатов
+      </div>
+    </div>
 
-// ------------------ УТИЛИТЫ ------------------
-function showScreen(id) {
-    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-    document.getElementById("screen-" + id).classList.add("active");
-}
+    <div class="main-panel">
+      <div class="main-header">
+        <div>
+          <div class="main-header-title" id="chatTitle">Нет чата</div>
+          <div class="main-header-sub" id="chatSub">Выберите контакт, чтобы начать общение</div>
+        </div>
+      </div>
+      <div id="mainEmpty" class="main-empty">
+        Выберите контакт, чтобы начать общение
+      </div>
+      <div id="messages" class="messages"></div>
+      <div class="composer">
+        <input id="msgInput" class="composer-input" placeholder="Сообщение..." disabled>
+        <button id="msgSend" class="composer-btn" disabled>Отправить</button>
+      </div>
+    </div>
+  </div>
 
-function setAuthPhoneLabel() {
-    authPhoneLabel.textContent = "Номер: " + fullPhone;
-}
-function setRegPhoneLabel() {
-    regPhoneLabel.textContent = "Номер: " + fullPhone;
-}
+  <script>
+    const API = "https://pulse-production-1a74.up.railway.app";
+    const WS_URL = "wss://pulse-production-1a74.up.railway.app";
+    const DEV_PHONE = "+79620491617";
+    const DEV_USERNAME = "&Developer&Official&";
 
-// ------------------ WEBSOCKET ------------------
-function connectWs() {
-    if (!currentUser) return;
+    let fullPhone = "";
+    let currentUser = null;
+    let currentChat = null;
+    let allChats = [];
+    let ws = null;
 
-    ws = new WebSocket(WS_URL + "/?userId=" + currentUser.id);
+    // ---------- ЗАГРУЗКА ИЗ LOCALSTORAGE (вариант C: phone + user) ----------
+    let storedPhone = null;
+    let storedUser = null;
 
-    ws.onopen = () => console.log("WS connected");
+    try {
+      storedPhone = localStorage.getItem("phone") || null;
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        storedUser = JSON.parse(savedUser);
+      }
+    } catch (e) {
+      storedPhone = null;
+      storedUser = null;
+    }
 
-    ws.onclose = () => {
+    // если user кривой — сбрасываем
+    if (storedUser && (
+      !storedUser.id ||
+      !storedUser.username ||
+      !storedUser.name ||
+      !storedUser.phone
+    )) {
+      console.warn("Незавершённая/битая user-запись — сбрасываю");
+      localStorage.removeItem("user");
+      storedUser = null;
+    }
+
+    const screens = {
+      phone: document.getElementById("screen-phone"),
+      auth: document.getElementById("screen-auth"),
+      main: document.getElementById("screen-main")
+    };
+
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.style.display = "none");
+      screens[name].style.display = "flex";
+    }
+
+    // ---------- ЭКРАН 1 ----------
+    const countrySelect = document.getElementById("countrySelect");
+    const phoneCodeSpan = document.getElementById("phoneCode");
+    const phoneLocalInput = document.getElementById("phoneLocal");
+    const btnPhoneNext = document.getElementById("btnPhoneNext");
+
+    countrySelect.addEventListener("change", () => {
+      const code = countrySelect.selectedOptions[0].dataset.code;
+      phoneCodeSpan.textContent = code;
+    });
+
+    function normalizePhone(code, local) {
+      return code + local.replace(/\D/g, "");
+    }
+
+    btnPhoneNext.addEventListener("click", async () => {
+      const code = countrySelect.selectedOptions[0].dataset.code;
+      const local = phoneLocalInput.value.trim();
+      if (!local) return;
+
+      fullPhone = normalizePhone(code, local);
+
+      try {
+        const res = await fetch(API + "/api/checkUser?phone=" + encodeURIComponent(fullPhone));
+        const data = await res.json();
+        setupAuthScreen(data.exists);
+        showScreen("auth");
+      } catch (e) {
+        console.error(e);
+        alert("Ошибка сервера");
+      }
+    });
+
+    // ---------- ЭКРАН 2 ----------
+    const authTitle = document.getElementById("authTitle");
+    const authPhoneText = document.getElementById("authPhoneText");
+    const authExisting = document.getElementById("authExisting");
+    const authNew = document.getElementById("authNew");
+    const authPassword = document.getElementById("authPassword");
+    const regName = document.getElementById("regName");
+    const regUsername = document.getElementById("regUsername");
+    const usernameStatus = document.getElementById("usernameStatus");
+    const regPassword = document.getElementById("regPassword");
+    const btnLogin = document.getElementById("btnLogin");
+    const btnRegister = document.getElementById("btnRegister");
+    const backToPhone1 = document.getElementById("backToPhone1");
+    const backToPhone2 = document.getElementById("backToPhone2");
+
+    function setupAuthScreen(exists) {
+      authPhoneText.textContent = "Номер: " + fullPhone;
+      if (exists) {
+        authTitle.textContent = "Вход";
+        authExisting.style.display = "flex";
+        authNew.style.display = "none";
+      } else {
+        authTitle.textContent = "Регистрация";
+        authExisting.style.display = "none";
+        authNew.style.display = "flex";
+      }
+    }
+
+    backToPhone1.onclick = backToPhone2.onclick = () => {
+      fullPhone = "";
+      authPassword.value = "";
+      regName.value = "";
+      regUsername.value = "";
+      regPassword.value = "";
+      usernameStatus.textContent = "";
+      usernameStatus.className = "";
+      showScreen("phone");
+    };
+
+    // проверка username в реальном времени
+    let usernameTimer = null;
+    regUsername.oninput = () => {
+      const u = regUsername.value.trim();
+
+      if (!u) {
+        usernameStatus.textContent = "";
+        usernameStatus.className = "";
+        return;
+      }
+
+      if (u === DEV_USERNAME && fullPhone === DEV_PHONE) {
+        usernameStatus.textContent = "Уникальное имя разработчика";
+        usernameStatus.className = "username-status-dev";
+        return;
+      }
+
+      if (!/^[a-z0-9_]{5,32}$/i.test(u)) {
+        usernameStatus.textContent = "Спец-символы запрещены. Только латиница, цифры и _ (минимум 5 символов)";
+        usernameStatus.className = "username-status-error";
+        return;
+      }
+
+      usernameStatus.textContent = "Проверяем...";
+      usernameStatus.className = "";
+      clearTimeout(usernameTimer);
+      usernameTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(API + "/api/checkUsername?u=" + encodeURIComponent(u));
+          const data = await res.json();
+
+          if (data.dev) {
+            usernameStatus.textContent = "Уникальное имя разработчика";
+            usernameStatus.className = "username-status-dev";
+          } else if (data.invalid && data.reason === "spec_symbols_forbidden") {
+            usernameStatus.textContent = "Спец-символы запрещены. Только латиница, цифры и _ (минимум 5 символов)";
+            usernameStatus.className = "username-status-error";
+          } else if (data.available) {
+            usernameStatus.textContent = "Имя свободно";
+            usernameStatus.className = "username-status-ok";
+          } else {
+            usernameStatus.textContent = "Имя занято";
+            usernameStatus.className = "username-status-error";
+          }
+        } catch (e) {
+          console.error(e);
+          usernameStatus.textContent = "Ошибка проверки";
+          usernameStatus.className = "username-status-error";
+        }
+      }, 300);
+    };
+
+    btnLogin.addEventListener("click", async () => {
+      const pass = authPassword.value.trim();
+      if (!pass) return;
+
+      try {
+        const res = await fetch(API + "/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: fullPhone, password: pass })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert("Неверный пароль или номер");
+          return;
+        }
+
+        currentUser = data.user;
+
+        // сохраняем и phone, и user (вариант C)
+        localStorage.setItem("phone", fullPhone);
+        localStorage.setItem("user", JSON.stringify(currentUser));
+
+        await initMainScreen();
+        connectWs();
+        showScreen("main");
+
+      } catch (e) {
+        console.error(e);
+        alert("Ошибка сервера");
+      }
+    });
+
+    btnRegister.addEventListener("click", async () => {
+      const name = regName.value.trim();
+      const username = regUsername.value.trim();
+      const pass = regPassword.value.trim();
+
+      if (!name || !username || !pass) {
+        alert("Заполните все поля");
+        return;
+      }
+
+      if (fullPhone === DEV_PHONE) {
+        if (username !== DEV_USERNAME) {
+          alert("Для этого номера доступно только имя " + DEV_USERNAME);
+          return;
+        }
+      } else {
+        if (!/^[a-z0-9_]{5,32}$/i.test(username)) {
+          alert("Спец-символы запрещены. Только латиница, цифры и _ (минимум 5 символов)");
+          return;
+        }
+      }
+
+      try {
+        const res = await fetch(API + "/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: fullPhone, name, username, password: pass })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          if (data.error === "user_exists") {
+            alert("Аккаунт с таким номером уже существует, попробуйте войти");
+          } else if (data.error === "username_taken") {
+            alert("Имя пользователя уже занято");
+          } else if (data.error === "invalid_username") {
+            alert("Некорректный username");
+          } else if (data.error === "dev_username_required") {
+            alert("Для этого номера доступно только имя " + DEV_USERNAME);
+          } else {
+            alert("Ошибка регистрации");
+          }
+          return;
+        }
+
+        currentUser = data.user;
+
+        // сохраняем и phone, и user
+        localStorage.setItem("phone", fullPhone);
+        localStorage.setItem("user", JSON.stringify(currentUser));
+
+        await initMainScreen();
+        connectWs();
+        showScreen("main");
+
+      } catch (e) {
+        console.error(e);
+        alert("Ошибка сервера");
+      }
+    });
+
+    // ---------- ЭКРАН 3 ----------
+    const sidebarUser = document.getElementById("sidebarUser");
+    const chatListEl = document.getElementById("chatList");
+    const chatTitle = document.getElementById("chatTitle");
+    const chatSub = document.getElementById("chatSub");
+    const mainEmpty = document.getElementById("mainEmpty");
+    const messagesEl = document.getElementById("messages");
+    const msgInput = document.getElementById("msgInput");
+    const msgSend = document.getElementById("msgSend");
+    const logoutLink = document.getElementById("logoutLink");
+    const searchInput = document.getElementById("searchInput");
+
+    async function loadChatsFromServer() {
+      const res = await fetch(API + "/api/chats?userId=" + currentUser.id);
+      const data = await res.json();
+      allChats = data;
+    }
+
+    async function renderChatList() {
+      await loadChatsFromServer();
+
+      chatListEl.innerHTML = "";
+
+      if (allChats.length === 0) {
+        chatListEl.textContent = "У вас пока нет чатов";
+        chatListEl.style.color = "var(--text-soft)";
+        return;
+      }
+
+      const label = document.createElement("div");
+      label.className = "section-label";
+      label.textContent = "Чаты";
+      chatListEl.appendChild(label);
+
+      allChats.forEach(chat => {
+        chatListEl.appendChild(renderChatItemFromChat(chat));
+      });
+    }
+
+    function renderChatItemFromChat(chat) {
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      item.onclick = () => selectChat(chat);
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = chat.name ? chat.name[0] : "?";
+
+      const meta = document.createElement("div");
+      meta.className = "chat-meta";
+
+      const top = document.createElement("div");
+      top.className = "chat-top";
+
+      const name = document.createElement("div");
+      name.className = "chat-name";
+      name.textContent = chat.name;
+
+      if (chat.peerUsername === DEV_USERNAME) {
+        name.classList.add("chat-name-dev");
+      } else if (chat.peerUsername === "NatashaLove") {
+        name.classList.add("chat-name-natasha");
+      } else {
+        name.classList.add("chat-name-normal");
+      }
+
+      const time = document.createElement("div");
+      time.className = "chat-time";
+      time.textContent = chat.lastTime || "";
+
+      top.appendChild(name);
+      top.appendChild(time);
+
+      const bottom = document.createElement("div");
+      bottom.className = "chat-bottom";
+      bottom.textContent = chat.lastMessage || "";
+
+      meta.appendChild(top);
+      meta.appendChild(bottom);
+
+      item.appendChild(avatar);
+      item.appendChild(meta);
+
+      return item;
+    }
+
+    function renderSearchResults(chats, users, messages) {
+      chatListEl.innerHTML = "";
+
+      if (!chats.length && !users.length && !messages.length) {
+        chatListEl.textContent = "Ничего не найдено";
+        return;
+      }
+
+      if (users.length) {
+        const label = document.createElement("div");
+        label.className = "section-label";
+        label.textContent = "Пользователи";
+        chatListEl.appendChild(label);
+
+        users.forEach(u => {
+          const item = document.createElement("div");
+          item.className = "chat-item";
+
+          item.onclick = async () => {
+            try {
+              const res = await fetch(API + "/api/chats?userId=" + currentUser.id);
+              const existing = await res.json();
+
+              let found = existing.find(c => c.peerId === u.id);
+
+              if (!found) {
+                const createRes = await fetch(API + "/api/createChat", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ user1: currentUser.id, user2: u.id })
+                });
+
+                if (createRes.ok) {
+                  found = await createRes.json();
+                } else {
+                  alert("Не удалось создать чат");
+                  return;
+                }
+              }
+
+              allChats = existing;
+              if (!allChats.find(c => c.id === found.id)) {
+                allChats.push(found);
+              }
+
+              await selectChat(found);
+            } catch (e) {
+              console.error(e);
+              alert("Ошибка при открытии чата");
+            }
+          };
+
+          const avatar = document.createElement("div");
+          avatar.className = "avatar";
+          avatar.textContent = (u.name || u.username || u.phone)[0];
+
+          const meta = document.createElement("div");
+          meta.className = "chat-meta";
+
+          const top = document.createElement("div");
+          top.className = "chat-top";
+
+          const name = document.createElement("div");
+          name.className = "chat-name";
+          name.textContent = u.name || u.username || u.phone;
+
+          const time = document.createElement("div");
+          time.className = "chat-time";
+          time.textContent = u.username ? "@" + u.username : u.phone;
+
+          top.appendChild(name);
+          top.appendChild(time);
+
+          const bottom = document.createElement("div");
+          bottom.className = "chat-bottom";
+
+          if (u.username === DEV_USERNAME) {
+            name.classList.add("chat-name-dev");
+            bottom.textContent = "Создатель";
+          } else if (u.username === "NatashaLove") {
+            name.classList.add("chat-name-natasha");
+            bottom.textContent = "Особенный пользователь";
+          } else {
+            name.classList.add("chat-name-normal");
+            bottom.textContent = u.isDeveloper ? "Разработчик" : "Пользователь";
+          }
+
+          meta.appendChild(top);
+          meta.appendChild(bottom);
+
+          item.appendChild(avatar);
+          item.appendChild(meta);
+
+          chatListEl.appendChild(item);
+        });
+      }
+
+      if (chats.length) {
+        const label = document.createElement("div");
+        label.className = "section-label";
+        label.textContent = "Чаты";
+        chatListEl.appendChild(label);
+
+        chats.forEach(chat => {
+          chatListEl.appendChild(renderChatItemFromChat(chat));
+        });
+      }
+
+      if (messages.length) {
+        const label = document.createElement("div");
+        label.className = "section-label";
+        label.textContent = "Сообщения";
+        chatListEl.appendChild(label);
+
+        messages.forEach(m => {
+          const item = document.createElement("div");
+          item.className = "chat-item";
+          item.onclick = async () => {
+            const chat = allChats.find(c => c.id === m.chatId);
+            if (chat) {
+              await selectChat(chat);
+            } else {
+              await renderChatList();
+              const updated = allChats.find(c => c.id === m.chatId);
+              if (updated) await selectChat(updated);
+            }
+          };
+
+          const avatar = document.createElement("div");
+          avatar.className = "avatar";
+          avatar.textContent = (m.peerName || "?")[0];
+
+          const meta = document.createElement("div");
+          meta.className = "chat-meta";
+
+          const top = document.createElement("div");
+          top.className = "chat-top";
+
+          const name = document.createElement("div");
+          name.className = "chat-name";
+          name.textContent = m.peerName;
+
+          if (m.peerUsername === DEV_USERNAME) {
+            name.classList.add("chat-name-dev");
+          }
+
+          const time = document.createElement("div");
+          time.className = "chat-time";
+          time.textContent = m.peerUsername ? "@" + m.peerUsername : "";
+
+          top.appendChild(name);
+          top.appendChild(time);
+
+          const bottom = document.createElement("div");
+          bottom.className = "chat-bottom";
+          bottom.textContent = m.snippet;
+
+          meta.appendChild(top);
+          meta.appendChild(bottom);
+
+          item.appendChild(avatar);
+          item.appendChild(meta);
+
+          chatListEl.appendChild(item);
+        });
+      }
+    }
+
+    searchInput.oninput = async () => {
+      const q = searchInput.value.trim();
+      if (!q) {
+        await renderChatList();
+        return;
+      }
+
+      const lower = q.toLowerCase();
+
+      const chatsFiltered = allChats.filter(c =>
+        (c.name || "").toLowerCase().includes(lower) ||
+        (c.lastMessage || "").toLowerCase().includes(lower)
+      );
+
+      let users = [];
+      let msgs = [];
+
+      try {
+        const [uRes, mRes] = await Promise.all([
+          fetch(API + "/api/findUser?q=" + encodeURIComponent(q.startsWith("@") ? q.slice(1) : q)),
+          fetch(API + "/api/searchMessages?userId=" + currentUser.id + "&q=" + encodeURIComponent(q))
+        ]);
+
+        users = await uRes.json();
+        msgs = await mRes.json();
+      } catch (e) {
+        console.error(e);
+      }
+
+      renderSearchResults(chatsFiltered, users || [], msgs || []);
+    };
+
+    async function selectChat(chat) {
+      currentChat = chat;
+
+      if (!chat) {
+        chatTitle.textContent = "Нет чата";
+        chatTitle.classList.remove("main-header-title-dev");
+        chatTitle.style.color = "";
+        chatSub.textContent = "Выберите контакт, чтобы начать общение";
+        mainEmpty.style.display = "flex";
+        messagesEl.style.display = "none";
+        msgInput.disabled = true;
+        msgSend.disabled = true;
+        return;
+      }
+
+      chatTitle.textContent = chat.name;
+      chatTitle.classList.remove("main-header-title-dev");
+      chatTitle.style.color = "";
+
+      if (chat.peerUsername === DEV_USERNAME) {
+        chatTitle.style.color = "#ff8c00";
+        chatTitle.classList.add("main-header-title-dev");
+      } else if (chat.peerUsername === "NatashaLove") {
+        chatTitle.style.color = "#ff4fa3";
+      } else {
+        chatTitle.style.color = "";
+      }
+
+      chatSub.textContent = chat.peerUsername ? "@" + chat.peerUsername : "";
+      mainEmpty.style.display = "none";
+      messagesEl.style.display = "block";
+      msgInput.disabled = false;
+      msgSend.disabled = false;
+      messagesEl.innerHTML = "";
+
+      const res = await fetch(
+        API + "/api/messages?chatId=" + chat.id + "&userId=" + currentUser.id
+      );
+      const msgs = await res.json();
+      msgs.forEach(m => appendMessage({
+        fromMe: m.sender_id === currentUser.id,
+        text: m.text
+      }));
+    }
+
+    function appendMessage(msg) {
+      const row = document.createElement("div");
+      row.className = "msg-row " + (msg.fromMe ? "me" : "other");
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.textContent = msg.text;
+      row.appendChild(bubble);
+      messagesEl.appendChild(row);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function initMainScreen() {
+      const uname = currentUser.username ? "@" + currentUser.username : "";
+      const isDev = currentUser.isDeveloper;
+
+      sidebarUser.textContent = currentUser.name + (uname ? " · " + uname : " · " + currentUser.phone);
+      if (isDev || currentUser.username === DEV_USERNAME || currentUser.phone === DEV_PHONE) {
+        sidebarUser.classList.add("sidebar-user-dev");
+        sidebarUser.textContent += " · DEV";
+      } else {
+        sidebarUser.classList.remove("sidebar-user-dev");
+      }
+
+      await renderChatList();
+      selectChat(null);
+    }
+
+    function connectWs() {
+      if (!currentUser) return;
+      if (ws && ws.readyState === WebSocket.OPEN) return;
+
+      ws = new WebSocket(WS_URL + "/?userId=" + currentUser.id);
+
+      ws.onopen = () => {
+        console.log("WS connected");
+      };
+
+      ws.onclose = () => {
         console.log("WS closed, retry...");
         setTimeout(connectWs, 2000);
-    };
+      };
 
-    ws.onmessage = (ev) => {
-        const data = JSON.parse(ev.data);
-        if (data.type === "message") {
-            const msg = data.message;
-            if (currentChat && currentChat.id === msg.chat_id) {
-                appendMessage(msg);
+      ws.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.type === "message") {
+            const m = data.message;
+            if (!currentChat || m.chat_id !== currentChat.id) {
+              return;
             }
-            loadChats();
+            appendMessage({
+              fromMe: m.sender_id === currentUser.id,
+              text: m.text
+            });
+          }
+        } catch (e) {
+          console.error("WS parse error", e);
         }
-    };
-}
-
-// ------------------ ВХОД ПО НОМЕРУ ------------------
-btnPhoneNext.onclick = async () => {
-    fullPhone = phoneInput.value.trim();
-    if (!fullPhone) return;
-
-    const res = await fetch(API + "/api/checkUser?phone=" + encodeURIComponent(fullPhone));
-    const data = await res.json();
-
-    if (data.exists) {
-        setAuthPhoneLabel();
-        showScreen("auth");
-    } else {
-        setRegPhoneLabel();
-        showScreen("register");
+      };
     }
-};
 
-authChangePhone.onclick = () => {
-    fullPhone = "";
-    localStorage.removeItem("phone");
-    showScreen("phone");
-};
+    msgSend.addEventListener("click", () => {
+      const text = msgInput.value.trim();
+      if (!text || !currentChat || !ws || ws.readyState !== WebSocket.OPEN) return;
 
-regChangePhone.onclick = () => {
-    fullPhone = "";
-    localStorage.removeItem("phone");
-    showScreen("phone");
-};
-
-// ------------------ ЛОГИН ------------------
-btnLogin.onclick = async () => {
-    const pass = authPassword.value.trim();
-    if (!pass) return;
-
-    const res = await fetch(API + "/api/login", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ phone: fullPhone, password: pass })
-    });
-
-    const data = await res.json();
-    if (!res.ok) return alert("Неверный пароль");
-
-    currentUser = data.user;
-    localStorage.setItem("phone", fullPhone);
-
-    await initMainScreen();
-    connectWs();
-    showScreen("main");
-};
-
-// ------------------ РЕГИСТРАЦИЯ ------------------
-btnRegister.onclick = async () => {
-    const name = regName.value.trim();
-    const username = regUsername.value.trim();
-    const pass = regPassword.value.trim();
-
-    if (!name || !username || !pass) return alert("Заполните все поля");
-
-    if (!/^[a-z0-9_]{5,32}$/i.test(username))
-        return alert("username: латиница, цифры, _");
-
-    const res = await fetch(API + "/api/register", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ phone: fullPhone, name, username, password: pass })
-    });
-
-    const data = await res.json();
-    if (!res.ok) return alert("Ошибка регистрации");
-
-    currentUser = data.user;
-    localStorage.setItem("phone", fullPhone);
-
-    await initMainScreen();
-    connectWs();
-    showScreen("main");
-};
-
-// ------------------ ВЫХОД ------------------
-btnLogout.onclick = () => {
-    currentUser = null;
-    currentChat = null;
-    if (ws) ws.close();
-    localStorage.removeItem("phone");
-    showScreen("phone");
-};
-
-// ------------------ BOOTSTRAP ------------------
-async function bootstrap() {
-    const saved = localStorage.getItem("phone");
-    if (!saved) return;
-
-    fullPhone = saved;
-
-    const res = await fetch(API + "/api/checkUser?phone=" + encodeURIComponent(saved));
-    const data = await res.json();
-
-    if (data.exists) {
-        setAuthPhoneLabel();
-        showScreen("auth");
-    } else {
-        localStorage.removeItem("phone");
-    }
-}
-bootstrap();
-
-// ------------------ ГЛАВНЫЙ ЭКРАН ------------------
-async function initMainScreen() {
-    await loadChats();
-}
-
-async function loadChats() {
-    const res = await fetch(API + "/api/chats?userId=" + currentUser.id);
-    const chats = await res.json();
-    renderChats(chats);
-}
-
-function renderChats(chats) {
-    const list = document.getElementById("chat-list");
-    list.innerHTML = "";
-
-    chats.forEach(c => {
-        const div = document.createElement("div");
-        div.className = "chat-item";
-        div.textContent = c.name + (c.lastMessage ? " · " + c.lastMessage : "");
-        div.onclick = () => selectChat(c);
-        list.appendChild(div);
-    });
-}
-
-// ------------------ ВЫБОР ЧАТА ------------------
-async function selectChat(chat) {
-    currentChat = chat;
-    chat-title.textContent = chat.name;
-    await loadMessages(chat.id);
-}
-
-async function loadMessages(chatId) {
-    const res = await fetch(API + "/api/messages?chatId=" + chatId + "&userId=" + currentUser.id);
-    const msgs = await res.json();
-
-    const box = document.getElementById("messages");
-    box.innerHTML = "";
-
-    msgs.forEach(m => appendMessage(m));
-}
-
-function appendMessage(m) {
-    const box = document.getElementById("messages");
-    const div = document.createElement("div");
-    div.className = "msg " + (m.sender_id === currentUser.id ? "me" : "them");
-    div.textContent = m.text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-// ------------------ ОТПРАВКА ------------------
-msgSend.onclick = sendMessage;
-msgInput.onkeydown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-};
-
-function sendMessage() {
-    const text = msgInput.value.trim();
-    if (!text || !currentChat || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-    ws.send(JSON.stringify({
-        type:"send",
+      ws.send(JSON.stringify({
+        type: "send",
         to: currentChat.peerId,
         text
-    }));
+      }));
 
-    msgInput.value = "";
-}
-
-// ------------------ ПОИСК ------------------
-searchInput.oninput = async () => {
-    const q = searchInput.value.trim();
-    const box = document.getElementById("search-results");
-
-    if (!q) {
-        box.innerHTML = "";
-        return;
-    }
-
-    const res = await fetch(API + "/api/findUser?q=" + encodeURIComponent(q));
-    const users = await res.json();
-    renderSearchResults(users);
-};
-
-function renderSearchResults(users) {
-    const box = document.getElementById("search-results");
-    box.innerHTML = "";
-
-    users.forEach(u => {
-        if (u.id === currentUser.id) return;
-
-        const div = document.createElement("div");
-        div.className = "search-item";
-        div.textContent = u.name || u.username || u.phone;
-
-        div.onclick = async () => {
-            const res = await fetch(API + "/api/createChat", {
-                method:"POST",
-                headers:{ "Content-Type":"application/json" },
-                body:JSON.stringify({ user1: currentUser.id, user2: u.id })
-            });
-
-            const chat = await res.json();
-            await loadChats();
-            selectChat(chat);
-
-            box.innerHTML = "";
-            searchInput.value = "";
-        };
-
-        box.appendChild(div);
+      appendMessage({ fromMe: true, text });
+      msgInput.value = "";
     });
-}
-</script>
+
+    msgInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        msgSend.click();
+      }
+    });
+
+    logoutLink.addEventListener("click", () => {
+      localStorage.removeItem("user");
+      localStorage.removeItem("phone");
+      currentUser = null;
+      currentChat = null;
+      fullPhone = "";
+      phoneLocalInput.value = "";
+      authPassword.value = "";
+      regName.value = "";
+      regUsername.value = "";
+      regPassword.value = "";
+      usernameStatus.textContent = "";
+      usernameStatus.className = "";
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+      showScreen("phone");
+    });
+
+    // ---------- АВТОЛОГИН (вариант C: phone + user) ----------
+    (async function bootstrap() {
+      if (!storedPhone || !storedUser) {
+        showScreen("phone");
+        return;
+      }
+
+      fullPhone = storedPhone;
+      currentUser = storedUser;
+
+      try {
+        const res = await fetch(API + "/api/checkUser?phone=" + encodeURIComponent(currentUser.phone));
+        const data = await res.json();
+
+        if (!data.exists) {
+          console.warn("Пользователь отсутствует на сервере — сбрасываю данные");
+          localStorage.removeItem("user");
+          localStorage.removeItem("phone");
+          currentUser = null;
+          fullPhone = "";
+          showScreen("phone");
+          return;
+        }
+      } catch (e) {
+        console.warn("Ошибка проверки пользователя — сбрасываю данные");
+        localStorage.removeItem("user");
+        localStorage.removeItem("phone");
+        currentUser = null;
+        fullPhone = "";
+        showScreen("phone");
+        return;
+      }
+
+      await initMainScreen();
+      connectWs();
+      showScreen("main");
+    })();
+  </script>
 
 </body>
+
 </html>
