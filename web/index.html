@@ -1,175 +1,304 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Pulse</title>
-
+  <meta charset="UTF-8">
+  <title>Messenger</title>
   <style>
+    :root {
+      --bg: #111;
+      --panel: #181818;
+      --panel-light: #202020;
+      --accent: #1e88e5;
+      --accent-soft: #1565c0;
+      --border: #333;
+      --text: #eee;
+      --text-soft: #aaa;
+      --dev: #ffb300;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      background: #111;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       height: 100vh;
       overflow: hidden;
     }
 
-    /* ======= MOBILE HEADER (Pulse) ======= */
-    #mobileHeader {
-      display: flex;
-      align-items: center;
-      padding: 10px 14px;
-      background: #1f1f1f;
-      height: 56px;
-      border-bottom: 1px solid #2a2a2a;
-    }
-
-    .pulse-avatar {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      margin-right: 12px;
-    }
-
-    .pulse-title {
-      font-size: 20px;
-      font-weight: 600;
-      flex: 1;
-    }
-
-    .pulse-search-btn {
-      font-size: 22px;
-      padding: 4px;
-      cursor: pointer;
-    }
-
-    /* ======= MOBILE SEARCH ======= */
-    #mobileSearch {
+    .screen {
       display: none;
-      padding: 10px;
-      background: #1f1f1f;
-      border-bottom: 1px solid #2a2a2a;
+      height: 100vh;
+      width: 100vw;
     }
 
-    #mobileSearchInput {
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: none;
-      background: #2a2a2a;
-      color: white;
-      font-size: 16px;
-    }
-
-    /* ======= LAYOUT ======= */
-    #app {
-      display: flex;
-      height: calc(100vh - 56px);
-    }
-
-    /* ======= SIDEBAR ======= */
-    #sidebar {
-      width: 320px;
-      border-right: 1px solid #1c1c1c;
-      background: #111;
+    .centered {
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
     }
 
-    #sidebarHeader {
-      padding: 10px;
-      border-bottom: 1px solid #1c1c1c;
+    h1, h2, h3 {
+      margin: 0 0 8px;
+      font-weight: 500;
     }
 
-    #searchInput {
-      width: 100%;
-      padding: 8px 10px;
-      border-radius: 8px;
+    input, select, button {
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    button {
+      background: var(--accent);
       border: none;
-      background: #1f1f1f;
-      color: white;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background: var(--accent-soft);
+    }
+
+    .field-label {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-bottom: 4px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 280px;
+    }
+
+    .phone-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #000;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 0 10px;
+    }
+
+    .phone-code {
+      color: var(--text-soft);
+      white-space: nowrap;
       font-size: 14px;
     }
 
-    #chatListEl {
+    .phone-input {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      padding: 10px 0;
+      flex: 1;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-soft);
+      max-width: 280px;
+      text-align: center;
+    }
+
+    .link {
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    #screen-main {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .sidebar {
+      width: 320px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-title {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .sidebar-user {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .sidebar-user-dev {
+      color: var(--dev);
+      font-weight: 500;
+    }
+
+    .search-box {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .chat-list {
       flex: 1;
       overflow-y: auto;
+      padding: 6px 0;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .section-label {
+      padding: 4px 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-soft);
     }
 
     .chat-item {
+      padding: 8px 10px;
       display: flex;
-      padding: 12px;
-      border-bottom: 1px solid #1c1c1c;
+      gap: 8px;
       cursor: pointer;
+      align-items: center;
+    }
+
+    .chat-item:hover {
+      background: var(--panel-light);
     }
 
     .avatar {
-      width: 42px;
-      height: 42px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       background: #333;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-right: 12px;
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .chat-meta {
       flex: 1;
+      min-width: 0;
+    }
+
+    .chat-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 2px;
     }
 
     .chat-name {
-      font-size: 16px;
-      font-weight: 600;
+      font-weight: 500;
+    }
+
+    .chat-name-dev {
+      color: var(--dev);
+    }
+
+    .chat-time {
+      color: var(--text-soft);
+      font-size: 11px;
     }
 
     .chat-bottom {
-      font-size: 14px;
-      color: #aaa;
-      margin-top: 4px;
+      font-size: 12px;
+      color: var(--text-soft);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* ======= MAIN CHAT ======= */
-    #main {
+    .main-panel {
       flex: 1;
+      background: #101010;
       display: flex;
       flex-direction: column;
-      background: #111;
     }
 
-    #chatHeader {
+    .main-header {
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
       display: flex;
       align-items: center;
-      padding: 10px 14px;
-      background: #1f1f1f;
-      height: 56px;
-      border-bottom: 1px solid #2a2a2a;
+      justify-content: space-between;
     }
 
-    #backBtn {
-      display: none;
-      font-size: 22px;
-      margin-right: 12px;
-      cursor: pointer;
+    .main-header-title {
+      font-size: 15px;
+      font-weight: 500;
     }
 
-    #chatHeaderName {
-      font-size: 18px;
-      font-weight: 600;
+    .main-header-title-dev {
+      color: var(--dev);
     }
 
-    #messagesEl {
+    .main-header-sub {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .main-empty {
       flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 10px 12px;
       overflow-y: auto;
-      padding: 12px;
+      display: none;
     }
 
     .msg-row {
-      max-width: 85%;
-      margin: 6px 0;
+      margin-bottom: 6px;
       display: flex;
     }
 
@@ -178,116 +307,245 @@
     }
 
     .msg-bubble {
-      padding: 8px 12px;
+      max-width: 60%;
+      padding: 6px 10px;
       border-radius: 12px;
-      font-size: 15px;
+      font-size: 13px;
       line-height: 1.3;
-      max-width: 100%;
-      word-break: break-word;
     }
 
     .msg-row.me .msg-bubble {
-      background: #4a8cff;
-      color: white;
-      border-bottom-right-radius: 4px;
+      background: var(--accent);
     }
 
     .msg-row.other .msg-bubble {
-      background: #2a2a2a;
-      color: white;
-      border-bottom-left-radius: 4px;
+      background: var(--panel-light);
     }
 
-    /* ======= INPUT AREA ======= */
-    #inputArea {
-      padding: 10px;
-      background: #1f1f1f;
-      border-top: 1px solid #2a2a2a;
+    .composer {
+      border-top: 1px solid var(--border);
+      padding: 8px 10px;
       display: flex;
+      gap: 8px;
+      align-items: center;
     }
 
-    #msgInput {
+    .composer-input {
       flex: 1;
-      padding: 10px;
-      border-radius: 10px;
-      border: none;
-      background: #2a2a2a;
-      color: white;
-      font-size: 15px;
+      padding: 8px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
     }
 
-    #msgSend {
-      margin-left: 10px;
-      padding: 0 16px;
-      background: #4a8cff;
+    .composer-btn {
+      padding: 8px 14px;
+      border-radius: 16px;
       border: none;
-      border-radius: 10px;
-      color: white;
-      font-size: 16px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
       cursor: pointer;
     }
 
-    /* ======= MOBILE ADAPTATION ======= */
-    @media (max-width: 768px) {
-      #sidebar {
-        width: 100%;
-        border-right: none;
-      }
-
-      #main {
-        display: none;
-        width: 100%;
-      }
-
-      #backBtn {
-        display: block;
-      }
+    .composer-btn:hover {
+      background: var(--accent-soft);
     }
+
+    .back-link {
+      font-size: 12px;
+      color: var(--text-soft);
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .username-status-error {
+      color: #f44336;
+    }
+
+    .username-status-ok {
+      color: #4caf50;
+    }
+
+    .username-status-dev {
+      color: var(--dev);
+      font-weight: 500;
+    }
+    .chat-name-dev {
+      color: #ff8c00; /* твой оранжевый */
+      font-weight: 600;
+    }
+
+    .chat-name-natasha {
+      color: #ff4fa3; /* розовый */
+      font-weight: 600;
+    } 
+
+  .chat-name-normal {
+  color: var(--text-soft);
+  }
+    /* ===== MOBILE ADAPTATION ===== */
+@media (max-width: 768px) {
+
+  #mobileHeader {
+    display: flex !important;
+  }
+
+  #sidebar {
+    width: 100% !important;
+    border-right: none !important;
+  }
+
+  #screen-main {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100% !important;
+  }
+
+  .main-panel {
+    display: none;
+    width: 100%;
+  }
+
+  #backBtnMobile {
+    display: block !important;
+  }
+}
+
   </style>
 </head>
-
 <body>
+<!-- MOBILE HEADER (Pulse) -->
+<div id="mobileHeader" style="
+  display:none;
+  align-items:center;
+  padding:10px 14px;
+  background:#1f1f1f;
+  height:56px;
+  border-bottom:1px solid #2a2a2a;
+">
+  <img src="pulse-logo.png" style="width:34px;height:34px;border-radius:50%;margin-right:12px;">
+  <div style="font-size:20px;font-weight:600;flex:1;">Pulse</div>
+  <div onclick="openMobileSearch()" style="font-size:22px;padding:4px;cursor:pointer;">🔍</div>
+</div>
 
-  <!-- MOBILE HEADER -->
-  <div id="mobileHeader">
-    <img src="pulse-logo.png" class="pulse-avatar">
-    <div class="pulse-title">Pulse</div>
-    <div class="pulse-search-btn" onclick="openMobileSearch()">🔍</div>
+<!-- MOBILE SEARCH -->
+<div id="mobileSearch" style="display:none;padding:10px;background:#1f1f1f;border-bottom:1px solid #2a2a2a;">
+  <input id="mobileSearchInput" placeholder="Поиск" style="
+    width:100%;
+    padding:10px 14px;
+    border-radius:10px;
+    border:none;
+    background:#2a2a2a;
+    color:white;
+    font-size:16px;
+  ">
+</div>
+
+<!-- ЭКРАН 1: ТЕЛЕФОН -->
+<div id="screen-phone" class="screen centered">
+  <h2>Вход по номеру телефона</h2>
+
+  <div class="field-group">
+    <div class="field-label">Страна</div>
+    <select id="countrySelect">
+      <option value="ru" data-code="+7">🇷🇺 Россия (+7)</option>
+      <option value="de" data-code="+49">🇩🇪 Германия (+49)</option>
+      <option value="ua" data-code="+380">🇺🇦 Украина (+380)</option>
+      <option value="kz" data-code="+7">🇰🇿 Казахстан (+7)</option>
+      <option value="us" data-code="+1">🇺🇸 США (+1)</option>
+    </select>
   </div>
 
-  <!-- MOBILE SEARCH -->
-  <div id="mobileSearch">
-    <input id="mobileSearchInput" placeholder="Поиск">
-  </div>
-
-  <!-- APP -->
-  <div id="app">
-
-    <!-- SIDEBAR -->
-    <div id="sidebar">
-      <div id="sidebarHeader">
-        <input id="searchInput" placeholder="Поиск">
-      </div>
-      <div id="chatListEl"></div>
+  <div class="field-group">
+    <div class="field-label">Телефон</div>
+    <div class="phone-wrapper">
+      <span id="phoneCode" class="phone-code">+7</span>
+      <input id="phoneLocal" class="phone-input" placeholder="900 000-00-00">
     </div>
-
-    <!-- MAIN CHAT -->
-    <div id="main">
-      <div id="chatHeader">
-        <div id="backBtn">←</div>
-        <div id="chatHeaderName"></div>
-      </div>
-
-      <div id="messagesEl"></div>
-
-      <div id="inputArea">
-        <input id="msgInput" placeholder="Сообщение">
-        <button id="msgSend">➤</button>
-      </div>
-    </div>
-
   </div>
 
+  <button id="btnPhoneNext" style="width:280px;">Далее</button>
+  <div class="hint">Мы используем номер телефона для входа или регистрации.</div>
+</div>
+
+<!-- ЭКРАН 2: ЛОГИН / РЕГИСТРАЦИЯ -->
+<div id="screen-auth" class="screen centered">
+  <h2 id="authTitle">Вход</h2>
+  <div id="authPhoneText" class="hint"></div>
+
+  <div id="authExisting" style="display:none; flex-direction:column; gap:12px; align-items:center;">
+    <div class="field-group">
+      <div class="field-label">Пароль</div>
+      <input id="authPassword" type="password" placeholder="Пароль">
+    </div>
+    <button id="btnLogin" style="width:280px;">Войти</button>
+    <div class="back-link" id="backToPhone1">Изменить номер</div>
+  </div>
+
+  <div id="authNew" style="display:none; flex-direction:column; gap:12px; align-items:center;">
+    <div class="field-group">
+      <div class="field-label">Имя</div>
+      <input id="regName" placeholder="Как вас называть">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Имя пользователя (@username)</div>
+      <input id="regUsername" placeholder="например: yaroslav">
+      <div id="usernameStatus" style="font-size:12px; margin-top:2px;"></div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Пароль</div>
+      <input id="regPassword" type="password" placeholder="Придумайте пароль">
+    </div>
+    <button id="btnRegister" style="width:280px;">Зарегистрироваться</button>
+    <div class="back-link" id="backToPhone2">Изменить номер</div>
+  </div>
+</div>
+
+<!-- ЭКРАН 3: ОСНОВНОЙ -->
+<div id="screen-main" class="screen">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div>
+        <div class="sidebar-title">Messenger</div>
+        <div class="sidebar-user" id="sidebarUser"></div>
+      </div>
+      <div class="link" id="logoutLink">Выйти</div>
+    </div>
+    <div class="search-box">
+      <input id="searchInput" class="search-input" placeholder="Поиск (@user, имя, текст)">
+    </div>
+    <div id="chatList" class="chat-list">
+      У вас пока нет чатов
+    </div>
+  </div>
+
+  <div class="main-panel">
+    <div class="main-header">
+      <div>
+        <div class="main-header-title" id="chatTitle">Нет чата</div>
+        <div class="main-header-sub" id="chatSub">Выберите контакт, чтобы начать общение</div>
+      </div>
+    </div>
+    <div id="mainEmpty" class="main-empty">
+      Выберите контакт, чтобы начать общение
+    </div>
+    <div id="messages" class="messages"></div>
+    <div class="composer">
+      <input id="msgInput" class="composer-input" placeholder="Сообщение..." disabled>
+      <button id="msgSend" class="composer-btn" disabled>Отправить</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const API = "https://pulse-production-1a74.up.railway.app";
