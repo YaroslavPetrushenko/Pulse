@@ -265,7 +265,6 @@ app.post("/api/createChat", async (req, res) => {
   try {
     const chat = await getOrCreateChat(user1, user2);
 
-    // определяем собеседника относительно user1
     const peerId = chat.user1_id === user1 ? chat.user2_id : chat.user1_id;
     const peer = await getUserById(peerId);
 
@@ -457,13 +456,11 @@ wss.on("connection", (ws, req) => {
               created_at: now
             };
 
-            // отправляем себе
             const wsFrom = wsClients.get(fromId);
             if (wsFrom && wsFrom.readyState === WebSocket.OPEN) {
               wsFrom.send(JSON.stringify({ type: "message", message }));
             }
 
-            // отправляем собеседнику
             const wsTo = wsClients.get(toId);
             if (wsTo && wsTo.readyState === WebSocket.OPEN) {
               wsTo.send(JSON.stringify({ type: "message", message }));
