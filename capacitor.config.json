@@ -1,5 +1,6 @@
 {
   "appId": "com.pulse.app",
   "appName": "Pulse",
-  "webDir": "static"
+  "webDir": "web",
+  "bundledWebRuntime": false
 }

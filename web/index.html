@@ -1084,6 +1084,7 @@ chatTitle.style.color = "";
   }
 
   function connectWs() {
+    return;
     if (!currentUser) return;
     ws = new WebSocket(WS_URL + "/?userId=" + currentUser.id);
 
