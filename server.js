@@ -1,25 +1,25 @@
 // server.js
 const express = require("express");
+const cors = require("cors");
 const bodyParser = require("body-parser");
 const sqlite3 = require("sqlite3").verbose();
-const { WebSocketServer } = require("ws");
 const http = require("http");
+const WebSocket = require("ws");
+const crypto = require("crypto");
 const path = require("path");
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, "static")));
 
-// ----------------------
-// DEV CONFIG
-// ----------------------
-const DEV_PHONE = "+79620491617";
-const DEV_USERNAME = "&Developer&Official&";
+const DB_FILE = path.join(__dirname, "cloud.db");
+const db = new sqlite3.Database(DB_FILE);
 
-// ----------------------
-// DATABASE
-// ----------------------
-const db = new sqlite3.Database("messenger.db");
-
+// ---------- ИНИЦИАЛИЗАЦИЯ БАЗЫ ----------
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -27,24 +27,19 @@ db.serialize(() => {
       phone TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       username TEXT UNIQUE,
-      isDeveloper INTEGER DEFAULT 0,
-      password TEXT NOT NULL
+      password_hash TEXT NOT NULL,
+      is_developer INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL
     )
   `);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS chats (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT,
-      type TEXT NOT NULL DEFAULT 'dialog'
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS chat_participants (
-      chat_id INTEGER NOT NULL,
-      user_id INTEGER NOT NULL,
-      UNIQUE(chat_id, user_id)
+      user1_id INTEGER NOT NULL,
+      user2_id INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE(user1_id, user2_id)
     )
   `);
 
@@ -59,14 +54,16 @@ db.serialize(() => {
   `);
 });
 
-// ----------------------
-// UTILS
-// ----------------------
+function hashPassword(pwd) {
+  return crypto.createHash("sha256").update(pwd).digest("hex");
+}
+
+// ---------- ВСПОМОГАТЕЛЬНОЕ ----------
 function getUserByPhone(phone) {
   return new Promise((resolve, reject) => {
     db.get("SELECT * FROM users WHERE phone = ?", [phone], (err, row) => {
-      if (err) reject(err);
-      else resolve(row || null);
+      if (err) return reject(err);
+      resolve(row || null);
     });
   });
 }
@@ -74,225 +71,180 @@ function getUserByPhone(phone) {
 function getUserByUsername(username) {
   return new Promise((resolve, reject) => {
     db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
-      if (err) reject(err);
-      else resolve(row || null);
+      if (err) return reject(err);
+      resolve(row || null);
     });
   });
 }
 
-function createUser(phone, name, username, password, isDev) {
+function getUserById(id) {
   return new Promise((resolve, reject) => {
-    db.run(
-      "INSERT INTO users (phone, name, username, password, isDeveloper) VALUES (?, ?, ?, ?, ?)",
-      [phone, name, username, password, isDev ? 1 : 0],
-      function (err) {
-        if (err) reject(err);
-        else resolve({
-          id: this.lastID,
-          phone,
-          name,
-          username,
-          isDeveloper: isDev ? 1 : 0
-        });
-      }
-    );
+    db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
   });
 }
 
-// ----------------------
-// CHECK USER (EXISTS?)
-// ----------------------
-app.get("/api/checkUser", async (req, res) => {
-  try {
-    const phone = req.query.phone;
-    if (!phone) return res.status(400).json({ error: "missing_phone" });
+function normalizeUserPublic(u) {
+  if (!u) return null;
+  return {
+    id: u.id,
+    phone: u.phone,
+    name: u.name,
+    username: u.username,
+    isDeveloper: !!u.is_developer
+  };
+}
 
+// ---------- API: ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ ----------
+app.get("/api/checkUser", async (req, res) => {
+  const phone = req.query.phone;
+  if (!phone) return res.json({ exists: false });
+
+  try {
     const user = await getUserByPhone(phone);
     res.json({ exists: !!user });
   } catch (e) {
-    console.error("CHECK USER ERROR:", e);
+    console.error(e);
     res.status(500).json({ error: "server_error" });
   }
 });
 
-// ----------------------
-// CHECK USERNAME
-// ----------------------
+// ---------- API: ПРОВЕРКА USERNAME ----------
 app.get("/api/checkUsername", async (req, res) => {
+  const u = (req.query.u || "").trim();
+  if (!u) return res.json({ available: false });
+
   try {
-    const u = (req.query.u || "").trim();
-
-    // DEV username — всегда разрешён, но только для DEV_PHONE
-    if (u === DEV_USERNAME) {
-      return res.json({
-        available: true,
-        dev: true
-      });
-    }
-
-    // обычным пользователям — только латиница, цифры, _
-    if (!/^[a-z0-9_]{5,32}$/i.test(u)) {
-      return res.json({
-        available: false,
-        invalid: true,
-        reason: "spec_symbols_forbidden"
-      });
-    }
-
     const user = await getUserByUsername(u);
-    res.json({ available: !user });
+    if (user) {
+      return res.json({ available: false });
+    }
+    res.json({ available: true });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ available: false });
+    res.status(500).json({ error: "server_error" });
   }
 });
 
-// ----------------------
-// REGISTER
-// ----------------------
+// ---------- API: РЕГИСТРАЦИЯ ----------
 app.post("/api/register", async (req, res) => {
-  console.log("REGISTER PHONE:", req.body.phone);
+  const { phone, name, username, password } = req.body || {};
+  if (!phone || !name || !username || !password) {
+    return res.status(400).json({ error: "missing_fields" });
+  }
+
   try {
-    const { phone, name, username, password } = req.body;
-
-    if (!phone || !name || !username || !password) {
-      return res.status(400).json({ error: "missing_fields" });
-    }
-
-    const uname = username.trim();
-
-    // DEV registration — только один такой пользователь
-    if (phone === DEV_PHONE) {
-  // username должен быть строго один
-  if (uname !== DEV_USERNAME) {
-    return res.status(400).json({ error: "dev_username_required" });
-  }
-
-  // если DEV уже существует — просто логинимся, а не выдаём ошибку
-  const existingDev = await getUserByPhone(phone);
-  if (existingDev) {
-    return res.json({ user: existingDev });
-  }
-
-  // если username занят — но это НЕ DEV — запрещаем
-  const existingDevByUsername = await getUserByUsername(uname);
-  if (existingDevByUsername && existingDevByUsername.phone !== DEV_PHONE) {
-    return res.status(400).json({ error: "username_taken" });
-  }
-
-  const user = await createUser(phone, name, uname, password, true);
-  return res.json({ user });
-}
-
-
-    // NORMAL USER
-    if (!/^[a-z0-9_]{5,32}$/i.test(uname)) {
-      return res.status(400).json({ error: "invalid_username" });
-    }
-
     const existingPhone = await getUserByPhone(phone);
     if (existingPhone) {
       return res.status(400).json({ error: "user_exists" });
     }
 
-    const existingUsername = await getUserByUsername(uname);
+    const existingUsername = await getUserByUsername(username);
     if (existingUsername) {
       return res.status(400).json({ error: "username_taken" });
     }
 
-    const user = await createUser(phone, name, uname, password, false);
-    res.json({ user });
-  } catch (e) {
-    console.error("REGISTER ERROR:", e);
-    res.status(500).json({ error: "server_error" });
-  }
-});
+    const now = Date.now();
+    const hash = hashPassword(password);
 
-// ----------------------
-// LOGIN
-// ----------------------
-app.post("/api/login", async (req, res) => {
-  try {
-    const { phone, password } = req.body;
-
-    const user = await getUserByPhone(phone);
-    if (!user || user.password !== password) {
-      return res.status(401).json({ error: "invalid_credentials" });
-    }
-
-    res.json({
-      user: {
-        id: user.id,
-        phone: user.phone,
-        name: user.name,
-        username: user.username,
-        isDeveloper: user.isDeveloper
+    db.run(
+      `INSERT INTO users (phone, name, username, password_hash, is_developer, created_at)
+       VALUES (?, ?, ?, ?, 0, ?)`,
+      [phone, name, username, hash, now],
+      function (err) {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "server_error" });
+        }
+        const user = {
+          id: this.lastID,
+          phone,
+          name,
+          username,
+          is_developer: 0
+        };
+        res.json({ user: normalizeUserPublic(user) });
       }
-    });
+    );
   } catch (e) {
-    console.error("LOGIN ERROR:", e);
+    console.error(e);
     res.status(500).json({ error: "server_error" });
   }
 });
 
-// ----------------------
-// SEARCH USERS
-// ----------------------
+// ---------- API: ЛОГИН ----------
+app.post("/api/login", async (req, res) => {
+  const { phone, password } = req.body || {};
+  if (!phone || !password) {
+    return res.status(400).json({ error: "missing_fields" });
+  }
+
+  try {
+    const user = await getUserByPhone(phone);
+    if (!user) {
+      return res.status(403).json({ error: "invalid_credentials" });
+    }
+    if (user.password_hash !== hashPassword(password)) {
+      return res.status(403).json({ error: "invalid_credentials" });
+    }
+    res.json({ user: normalizeUserPublic(user) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server_error" });
+  }
+});
+
+// ---------- API: ПОИСК ПОЛЬЗОВАТЕЛЯ ----------
 app.get("/api/findUser", (req, res) => {
   const q = (req.query.q || "").trim();
   if (!q) return res.json([]);
 
   const like = `%${q}%`;
-
   db.all(
     `
-    SELECT id, name, phone, username, isDeveloper
+    SELECT id, phone, name, username, is_developer
     FROM users
     WHERE phone LIKE ? OR name LIKE ? OR username LIKE ?
-    ORDER BY isDeveloper DESC, name ASC
     LIMIT 20
-    `,
+  `,
     [like, like, like],
     (err, rows) => {
       if (err) {
-        console.error("FIND USER ERROR:", err);
+        console.error(err);
         return res.status(500).json({ error: "server_error" });
       }
-      res.json(rows);
+      res.json(rows.map(normalizeUserPublic));
     }
   );
 });
-// ----------------------
-// CHAT HELPERS
-// ----------------------
-function createOrGetChat(userId, peerId) {
+
+// ---------- ВСПОМОГАТЕЛЬНОЕ: ПОЛУЧИТЬ ИЛИ СОЗДАТЬ ЧАТ ----------
+function getOrCreateChat(userId, peerId) {
   return new Promise((resolve, reject) => {
+    const a = Math.min(userId, peerId);
+    const b = Math.max(userId, peerId);
+
     db.get(
-      `
-      SELECT c.id
-      FROM chats c
-      JOIN chat_participants p1 ON p1.chat_id = c.id AND p1.user_id = ?
-      JOIN chat_participants p2 ON p2.chat_id = c.id AND p2.user_id = ?
-      WHERE c.type = 'dialog'
-      LIMIT 1
-      `,
-      [userId, peerId],
+      "SELECT * FROM chats WHERE user1_id = ? AND user2_id = ?",
+      [a, b],
       (err, row) => {
         if (err) return reject(err);
-        if (row) return resolve(row.id);
+        if (row) return resolve(row);
 
+        const now = Date.now();
         db.run(
-          "INSERT INTO chats (title, type) VALUES (?, 'dialog')",
-          [null],
+          "INSERT INTO chats (user1_id, user2_id, created_at) VALUES (?, ?, ?)",
+          [a, b, now],
           function (err2) {
             if (err2) return reject(err2);
-            const chatId = this.lastID;
-            db.run(
-              "INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?), (?, ?)",
-              [chatId, userId, chatId, peerId],
-              (err3) => {
+            db.get(
+              "SELECT * FROM chats WHERE id = ?",
+              [this.lastID],
+              (err3, row2) => {
                 if (err3) return reject(err3);
-                resolve(chatId);
+                resolve(row2);
               }
             );
           }
@@ -302,96 +254,74 @@ function createOrGetChat(userId, peerId) {
   });
 }
 
-function saveMessage(chatId, senderId, text) {
-  return new Promise((resolve, reject) => {
-    const ts = Date.now();
-    db.run(
-      "INSERT INTO messages (chat_id, sender_id, text, created_at) VALUES (?, ?, ?, ?)",
-      [chatId, senderId, text, ts],
-      function (err) {
-        if (err) return reject(err);
-        resolve({
-          id: this.lastID,
-          chat_id: chatId,
-          sender_id: senderId,
-          text,
-          created_at: ts
-        });
-      }
-    );
-  });
-}
-
-// ----------------------
-// LIST CHATS FOR USER
-// ----------------------
+// ---------- API: СПИСОК ЧАТОВ ----------
 app.get("/api/chats", (req, res) => {
-  const userId = Number(req.query.userId);
-  if (!userId) return res.status(400).json({ error: "missing_user" });
+  const userId = parseInt(req.query.userId, 10);
+  if (!userId) return res.json([]);
 
-  const sql = `
+  db.all(
+    `
     SELECT
       c.id,
-      c.type,
-      u.id AS peerId,
-      u.name AS name,
-      u.username AS peerUsername,
-      u.phone AS peerPhone,
-      u.isDeveloper AS peerIsDeveloper,
-      m.text AS lastMessage,
-      m.created_at AS lastTime
+      CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END AS peer_id,
+      u.name AS peer_name,
+      u.username AS peer_username,
+      u.is_developer AS peer_is_developer,
+      (
+        SELECT text FROM messages m
+        WHERE m.chat_id = c.id
+        ORDER BY m.created_at DESC
+        LIMIT 1
+      ) AS last_message,
+      (
+        SELECT created_at FROM messages m
+        WHERE m.chat_id = c.id
+        ORDER BY m.created_at DESC
+        LIMIT 1
+      ) AS last_time
     FROM chats c
-    JOIN chat_participants cp_self ON cp_self.chat_id = c.id AND cp_self.user_id = ?
-    JOIN chat_participants cp_peer ON cp_peer.chat_id = c.id AND cp_peer.user_id != ?
-    JOIN users u ON u.id = cp_peer.user_id
-    LEFT JOIN messages m ON m.id = (
-      SELECT id FROM messages
-      WHERE chat_id = c.id
-      ORDER BY created_at DESC
-      LIMIT 1
-    )
-    ORDER BY lastTime DESC NULLS LAST, c.id DESC
-  `;
+    JOIN users u ON u.id = CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END
+    WHERE c.user1_id = ? OR c.user2_id = ?
+    ORDER BY last_time DESC NULLS LAST, c.created_at DESC
+  `,
+    [userId, userId, userId, userId],
+    (err, rows) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "server_error" });
+      }
 
-  db.all(sql, [userId, userId], (err, rows) => {
-    if (err) {
-      console.error("CHATS ERROR:", err);
-      return res.status(500).json({ error: "server_error" });
+      const result = rows.map(r => ({
+        id: r.id,
+        peerId: r.peer_id,
+        name: r.peer_name || r.peer_username || "Пользователь",
+        peerUsername: r.peer_username,
+        lastMessage: r.last_message || "",
+        lastTime: r.last_time ? new Date(r.last_time).toLocaleTimeString() : ""
+      }));
+
+      res.json(result);
     }
-    const mapped = rows.map(r => ({
-      id: r.id,
-      type: r.type,
-      peerId: r.peerId,
-      name: r.name || r.peerUsername || r.peerPhone,
-      peerUsername: r.peerUsername,
-      lastMessage: r.lastMessage || "",
-      lastTime: r.lastTime ? new Date(r.lastTime).toLocaleTimeString() : ""
-    }));
-    res.json(mapped);
-  });
+  );
 });
 
-// ----------------------
-// LIST MESSAGES IN CHAT
-// ----------------------
+// ---------- API: СООБЩЕНИЯ ЧАТА ----------
 app.get("/api/messages", (req, res) => {
-  const chatId = Number(req.query.chatId);
-  const userId = Number(req.query.userId);
-  if (!chatId || !userId) {
-    return res.status(400).json({ error: "missing_params" });
-  }
+  const chatId = parseInt(req.query.chatId, 10);
+  const userId = parseInt(req.query.userId, 10);
+  if (!chatId || !userId) return res.json([]);
 
   db.all(
     `
     SELECT id, chat_id, sender_id, text, created_at
     FROM messages
     WHERE chat_id = ?
-    ORDER BY created_at ASC, id ASC
-    `,
+    ORDER BY created_at ASC
+  `,
     [chatId],
     (err, rows) => {
       if (err) {
-        console.error("MESSAGES ERROR:", err);
+        console.error(err);
         return res.status(500).json({ error: "server_error" });
       }
       res.json(rows);
@@ -399,117 +329,121 @@ app.get("/api/messages", (req, res) => {
   );
 });
 
-// ----------------------
-// SEARCH MESSAGES
-// ----------------------
+// ---------- API: ПОИСК СООБЩЕНИЙ ----------
 app.get("/api/searchMessages", (req, res) => {
-  const userId = Number(req.query.userId);
+  const userId = parseInt(req.query.userId, 10);
   const q = (req.query.q || "").trim();
   if (!userId || !q) return res.json([]);
 
   const like = `%${q}%`;
 
-  const sql = `
+  db.all(
+    `
     SELECT
       m.id,
-      m.chat_id AS chatId,
+      m.chat_id,
       m.text,
       m.created_at,
-      u.name AS peerName,
-      u.username AS peerUsername
+      u.name AS peer_name,
+      u.username AS peer_username
     FROM messages m
     JOIN chats c ON c.id = m.chat_id
-    JOIN chat_participants cp_self ON cp_self.chat_id = c.id AND cp_self.user_id = ?
-    JOIN chat_participants cp_peer ON cp_peer.chat_id = c.id AND cp_peer.user_id != ?
-    JOIN users u ON u.id = cp_peer.user_id
-    WHERE m.text LIKE ?
+    JOIN users u ON u.id = CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END
+    WHERE (c.user1_id = ? OR c.user2_id = ?)
+      AND m.text LIKE ?
     ORDER BY m.created_at DESC
     LIMIT 50
-  `;
+  `,
+    [userId, userId, userId, like],
+    (err, rows) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "server_error" });
+      }
 
-  db.all(sql, [userId, userId, like], (err, rows) => {
-    if (err) {
-      console.error("SEARCH MESSAGES ERROR:", err);
-      return res.status(500).json({ error: "server_error" });
+      const result = rows.map(r => ({
+        id: r.id,
+        chatId: r.chat_id,
+        text: r.text,
+        snippet: r.text.length > 80 ? r.text.slice(0, 77) + "..." : r.text,
+        peerName: r.peer_name || r.peer_username || "Пользователь",
+        peerUsername: r.peer_username
+      }));
+
+      res.json(result);
     }
-    const mapped = rows.map(r => ({
-      id: r.id,
-      chatId: r.chatId,
-      snippet: r.text,
-      peerName: r.peerName || r.peerUsername,
-      peerUsername: r.peerUsername
-    }));
-    res.json(mapped);
-  });
+  );
 });
 
-// ----------------------
-// STATIC
-// ----------------------
-app.use(express.static(path.join(__dirname, "static")));
-
-// ----------------------
-// WEBSOCKET
-// ----------------------
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
-
-const clients = new Map();
+// ---------- WEBSOCKET ----------
+const wsClients = new Map(); // userId -> ws
 
 wss.on("connection", (ws, req) => {
   const url = new URL(req.url, "http://localhost");
-  const userId = Number(url.searchParams.get("userId"));
-  if (!userId) return ws.close();
+  const userId = parseInt(url.searchParams.get("userId"), 10);
 
-  clients.set(userId, ws);
+  if (!userId) {
+    ws.close();
+    return;
+  }
 
-  ws.on("message", async (data) => {
-    try {
-      const msg = JSON.parse(data.toString());
-      if (msg.type !== "send") return;
+  wsClients.set(userId, ws);
 
-      const { to, text } = msg;
-      if (!to || !text) return;
-
-      const chatId = await createOrGetChat(userId, to);
-      const saved = await saveMessage(chatId, userId, text);
-
-      const payload = JSON.stringify({
-        type: "message",
-        message: saved
-      });
-
-      // отправляем себе
-      const wsFrom = clients.get(userId);
-      if (wsFrom && wsFrom.readyState === wsFrom.OPEN) {
-        wsFrom.send(payload);
-      }
-
-      // отправляем собеседнику
-      const wsTo = clients.get(to);
-      if (wsTo && wsTo.readyState === wsTo.OPEN) {
-        wsTo.send(payload);
-      }
-    } catch (e) {
-      console.error("WS error:", e);
-    }
+  ws.on("close", () => {
+    wsClients.delete(userId);
   });
 
-  ws.on("close", () => clients.delete(userId));
-});
-// ----------------------
-// GLOBAL ERROR HANDLER — чтобы НИКОГДА не было 500
-// ----------------------
-app.use((err, req, res, next) => {
-  console.error("GLOBAL ERROR:", err);
-  res.status(400).json({ error: "bad_request" });
+  ws.on("message", async (msg) => {
+    try {
+      const data = JSON.parse(msg.toString());
+      if (data.type === "send") {
+        const fromId = userId;
+        const toId = parseInt(data.to, 10);
+        const text = (data.text || "").trim();
+        if (!toId || !text) return;
+
+        const chat = await getOrCreateChat(fromId, toId);
+        const now = Date.now();
+
+        db.run(
+          "INSERT INTO messages (chat_id, sender_id, text, created_at) VALUES (?, ?, ?, ?)",
+          [chat.id, fromId, text, now],
+          function (err) {
+            if (err) {
+              console.error(err);
+              return;
+            }
+
+            const message = {
+              id: this.lastID,
+              chat_id: chat.id,
+              sender_id: fromId,
+              text,
+              created_at: now
+            };
+
+            // отправляем себе
+            const wsFrom = wsClients.get(fromId);
+            if (wsFrom && wsFrom.readyState === WebSocket.OPEN) {
+              wsFrom.send(JSON.stringify({ type: "message", message }));
+            }
+
+            // отправляем собеседнику
+            const wsTo = wsClients.get(toId);
+            if (wsTo && wsTo.readyState === WebSocket.OPEN) {
+              wsTo.send(JSON.stringify({ type: "message", message }));
+            }
+          }
+        );
+      }
+    } catch (e) {
+      console.error("WS message error", e);
+    }
+  });
 });
 
-// ----------------------
-// START
-// ----------------------
-const PORT = process.env.PORT || 8080;
+// ---------- СТАРТ ----------
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("Server listening on port", PORT);
 });
-
