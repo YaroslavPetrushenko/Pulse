@@ -14,7 +14,7 @@ const wss = new WebSocket.Server({ server });
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "static")));
+app.use(express.static(__dirname));
 
 const DB_FILE = path.join(__dirname, "cloud.db");
 const db = new sqlite3.Database(DB_FILE);
