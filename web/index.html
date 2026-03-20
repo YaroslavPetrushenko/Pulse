@@ -378,53 +378,56 @@
       color: var(--dev);
       font-weight: 500;
     }
+
     .chat-name-dev {
-      color: #ff8c00; /* твой оранжевый */
+      color: #ff8c00;
       font-weight: 600;
     }
 
     .chat-name-natasha {
-      color: #ff4fa3; /* розовый */
+      color: #ff4fa3;
       font-weight: 600;
-    } 
+    }
 
-  .chat-name-normal {
-  color: var(--text-soft);
-  }
+    .chat-name-normal {
+      color: var(--text-soft);
+    }
+
     /* ===== MOBILE ADAPTATION ===== */
-@media (max-width: 768px) {
+    @media (max-width: 768px) {
 
-  #mobileHeader {
-    display: flex !important;
-  }
+      #mobileHeader {
+        display: flex !important;
+      }
 
-  #sidebar {
-    width: 100% !important;
-    border-right: none !important;
-  }
+      #sidebar {
+        width: 100% !important;
+        border-right: none !important;
+      }
 
-  #screen-main {
-    flex-direction: column;
-  }
+      #screen-main {
+        flex-direction: column;
+      }
 
-  .sidebar {
-    width: 100% !important;
-  }
+      .sidebar {
+        width: 100% !important;
+      }
 
-  .main-panel {
-    display: none;
-    width: 100%;
-  }
+      .main-panel {
+        display: none;
+        width: 100%;
+      }
 
-  #backBtnMobile {
-    display: block !important;
-  }
-}
+      #backBtnMobile {
+        display: block !important;
+      }
+    }
 
   </style>
 </head>
 <body>
-<!-- MOBILE HEADER (Pulse) -->
+
+<!-- MOBILE HEADER (Pulse, без картинок) -->
 <div id="mobileHeader" style="
   display:none;
   align-items:center;
@@ -433,12 +436,10 @@
   height:56px;
   border-bottom:1px solid #2a2a2a;
 ">
-  <img src="pulse-logo.png" style="width:34px;height:34px;border-radius:50%;margin-right:12px;">
-  <div style="font-size:20px;font-weight:600;flex:1;">Pulse</div>
-  <div onclick="openMobileSearch()" style="font-size:22px;padding:4px;cursor:pointer;">🔍</div>
+  <div style="font-size:20px;font-weight:600;">Pulse</div>
 </div>
 
-<!-- MOBILE SEARCH -->
+<!-- MOBILE SEARCH (оставлен, но скрыт) -->
 <div id="mobileSearch" style="display:none;padding:10px;background:#1f1f1f;border-bottom:1px solid #2a2a2a;">
   <input id="mobileSearchInput" placeholder="Поиск" style="
     width:100%;
@@ -546,6 +547,7 @@
     </div>
   </div>
 </div>
+
 
 <script>
   const API = "https://pulse-production-1a74.up.railway.app";
