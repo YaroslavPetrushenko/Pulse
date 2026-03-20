@@ -254,6 +254,41 @@ function getOrCreateChat(userId, peerId) {
   });
 }
 
+// ---------- API: СОЗДАТЬ ИЛИ ПОЛУЧИТЬ ЧАТ ----------
+app.post("/api/createChat", async (req, res) => {
+  const { user1, user2 } = req.body || {};
+
+  if (!user1 || !user2) {
+    return res.status(400).json({ error: "missing_params" });
+  }
+
+  try {
+    const chat = await getOrCreateChat(user1, user2);
+
+    // определяем собеседника относительно user1
+    const peerId = chat.user1_id === user1 ? chat.user2_id : chat.user1_id;
+    const peer = await getUserById(peerId);
+
+    if (!peer) {
+      return res.status(500).json({ error: "peer_not_found" });
+    }
+
+    const result = {
+      id: chat.id,
+      peerId: peer.id,
+      name: peer.name || peer.username || "Пользователь",
+      peerUsername: peer.username,
+      lastMessage: "",
+      lastTime: ""
+    };
+
+    res.json(result);
+  } catch (err) {
+    console.error("createChat error:", err);
+    res.status(500).json({ error: "server_error" });
+  }
+});
+
 // ---------- API: СПИСОК ЧАТОВ ----------
 app.get("/api/chats", (req, res) => {
   const userId = parseInt(req.query.userId, 10);
