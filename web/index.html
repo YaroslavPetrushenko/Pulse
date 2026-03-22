@@ -1,618 +1,413 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
-  <meta charset="UTF-8">
-  <title>Pulse</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Pulse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Твои стили -->
-  <link rel="stylesheet" href="/css/app.css">
+    <style>
+        /* ====== БАЗА ====== */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #0d0d0f;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
 
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #000;
-      color: #fff;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
+        .app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+        }
 
-    .app {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
-    }
+        .app-inner {
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #0d0d0f;
+        }
 
-    .app-inner {
-      width: 100%;
-      max-width: 480px;
-      height: 100%;
-      background: #050509;
-      display: flex;
-      flex-direction: column;
-    }
+        /* ====== ЭКРАНЫ ====== */
+        .screen {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 24px;
+            animation-duration: .25s;
+        }
 
-    .screen {
-      flex: 1;
-      display: none;
-      flex-direction: column;
-      padding: 16px;
-    }
+        .screen.active {
+            display: flex;
+        }
 
-    .screen.active {
-      display: flex;
-    }
+        .slide-in {
+            animation-name: slideIn;
+        }
 
-    .screen-header {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
+        .slide-out {
+            animation-name: slideOut;
+        }
 
-    .screen-subtitle {
-      font-size: 14px;
-      opacity: 0.7;
-      margin-bottom: 24px;
-    }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0); opacity: 1; }
+        }
 
-    .field-label {
-      font-size: 13px;
-      opacity: 0.8;
-      margin-bottom: 6px;
-    }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to   { transform: translateX(-20%); opacity: 0; }
+        }
 
-    .phone-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
+        /* ====== ТЕКСТ ====== */
+        .title {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
 
-    .country-btn {
-      min-width: 110px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #333;
-      background: #111;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      font-size: 14px;
-    }
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.7;
+            margin-bottom: 24px;
+        }
 
-    .country-btn span.code {
-      opacity: 0.8;
-      margin-left: 6px;
-    }
+        .label {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 6px;
+        }
 
-    .input {
-      flex: 1;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #333;
-      background: #111;
-      color: #fff;
-      font-size: 14px;
-      outline: none;
-    }
+        /* ====== ПОЛЯ ====== */
+        .input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid #2a2a2d;
+            background: #141417;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 16px;
+        }
 
-    .primary-btn {
-      margin-top: auto;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      background: #4b6cff;
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+        .input:focus {
+            border-color: #4b6cff;
+        }
 
-    .primary-btn:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
+        /* ====== КНОПКИ ====== */
+        .primary-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            background: #4b6cff;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: auto;
+        }
 
-    .link {
-      color: #4b6cff;
-      cursor: pointer;
-    }
+        .primary-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
 
-    .username-status {
-      font-size: 12px;
-      margin-top: 4px;
-    }
+        /* ====== КНОПКА СТРАНЫ ====== */
+        .country-btn {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid #2a2a2d;
+            background: #141417;
+            color: #fff;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
 
-    /* Country picker */
-    .country-picker-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      display: flex;
-      justify-content: center;
-      align-items: flex-end;
-      z-index: 1000;
-    }
+        /* ====== COUNTRY PICKER ====== */
+        .country-picker-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 1000;
+        }
 
-    .country-picker {
-      width: 100%;
-      max-width: 480px;
-      max-height: 70%;
-      background: #111;
-      border-radius: 16px 16px 0 0;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-    }
+        .country-picker {
+            width: 100%;
+            max-width: 480px;
+            max-height: 70%;
+            background: #141417;
+            border-radius: 16px 16px 0 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .country-picker input.search {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #333;
-      background: #050509;
-      color: #fff;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
+        .country-picker input.search {
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #2a2a2d;
+            background: #0d0d0f;
+            color: #fff;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
 
-    .country-picker .items {
-      overflow-y: auto;
-    }
+        .country-picker .items {
+            overflow-y: auto;
+        }
 
-    .country-item {
-      padding: 8px 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      font-size: 14px;
-    }
+        .country-item {
+            padding: 12px 4px;
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+            font-size: 15px;
+        }
 
-    .country-item span.code {
-      opacity: 0.8;
-    }
+        .country-item:hover {
+            background: #1c1c20;
+        }
 
-    .country-item:hover {
-      background: #1a1a1a;
-    }
+        /* ====== TOP BAR ====== */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
 
-    /* Простые анимации экранов */
-    .screen {
-      position: relative;
-    }
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            border: 1px solid #2a2a2d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
 
-    .screen.slide-in {
-      animation: slideIn .25s ease forwards;
-    }
-
-    .screen.slide-out {
-      animation: slideOut .25s ease forwards;
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-
-    @keyframes slideOut {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-
-      to {
-        transform: translateX(-20%);
-        opacity: 0;
-      }
-    }
-
-    /* Заглушки для home/chats — ты потом заменишь на свой UI */
-    .chat-list {
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .chat-item {
-      padding: 10px 0;
-      border-bottom: 1px solid #181818;
-      cursor: pointer;
-    }
-
-    .chat-item-title {
-      font-size: 15px;
-    }
-
-    .chat-item-last {
-      font-size: 12px;
-      opacity: 0.7;
-    }
-
-    .top-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .back-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      border: 1px solid #333;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .top-title {
-      font-size: 16px;
-      font-weight: 600;
-    }
-  </style>
+        .top-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+    </style>
 </head>
 
 <body>
-  <div class="app">
+<div class="app">
     <div class="app-inner">
 
-      <!-- Экран: ввод номера -->
-      <div class="screen" id="screen-phone">
-        <div class="screen-header">Ваш номер телефона</div>
-        <div class="screen-subtitle">
-          Мы отправим код подтверждения в SMS или мессенджер.
+        <!-- ===================== ЭКРАН: ВВОД НОМЕРА ===================== -->
+        <div class="screen" id="screen-phone">
+            <div class="title">Ваш номер телефона</div>
+            <div class="subtitle">Мы отправим код подтверждения.</div>
+
+            <div class="label">Страна</div>
+            <button class="country-btn" id="countryBtn">
+                <span class="flag">🇷🇺</span>
+                <span class="code">+7</span>
+            </button>
+
+            <div class="label">Номер телефона</div>
+            <input class="input" id="phoneInput" placeholder="Введите 10 цифр" inputmode="numeric">
+
+            <button class="primary-btn" id="phoneNextBtn" disabled>Продолжить</button>
         </div>
 
-        <div class="field-label">Страна и номер</div>
-        <div class="phone-row">
-          <button class="country-btn" id="countryBtn">
-            <span class="flag">🇷🇺</span>
-            <span class="code">+7</span>
-          </button>
-          <input class="input" id="phoneInput" placeholder="Номер телефона" inputmode="tel">
+        <!-- ===================== ЭКРАН: ЮЗЕРНЕЙМ ===================== -->
+        <div class="screen" id="screen-username">
+            <div class="top-bar">
+                <div class="back-btn" id="usernameBackBtn">←</div>
+                <div class="top-title">Имя пользователя</div>
+            </div>
+
+            <div class="subtitle">Выберите уникальное имя.</div>
+
+            <div class="label">Юзернейм</div>
+            <input class="input" id="usernameInput" placeholder="@username">
+            <div id="usernameStatus" style="font-size:13px; margin-bottom:16px;"></div>
+
+            <button class="primary-btn" id="usernameNextBtn" disabled>Продолжить</button>
         </div>
 
-        <button class="primary-btn" id="phoneNextBtn">Продолжить</button>
-      </div>
-
-      <!-- Экран: выбор юзернейма -->
-      <div class="screen" id="screen-username">
-        <div class="top-bar">
-          <div class="back-btn" id="usernameBackBtn">←</div>
-          <div class="top-title">Имя пользователя</div>
+        <!-- ===================== ЭКРАН: ДОМАШНИЙ ===================== -->
+        <div class="screen" id="screen-home">
+            <div class="top-title" style="margin-bottom:16px;">Pulse</div>
+            <div id="chatList" style="flex:1; overflow-y:auto;"></div>
         </div>
-
-        <div class="screen-subtitle">
-          Выберите уникальное имя, по которому вас смогут найти.
-        </div>
-
-        <div class="field-label">Юзернейм</div>
-        <input class="input" id="usernameInput" placeholder="@username">
-        <div class="username-status" id="usernameStatus"></div>
-
-        <button class="primary-btn" id="usernameNextBtn">Продолжить</button>
-      </div>
-
-      <!-- Экран: список чатов (дом) -->
-      <div class="screen" id="screen-home">
-        <div class="top-bar">
-          <div class="top-title">Pulse</div>
-        </div>
-
-        <div class="chat-list" id="chatList">
-          <!-- сюда потом твой UI чатов -->
-        </div>
-      </div>
-
-      <!-- Экран: чат -->
-      <div class="screen" id="screen-chat">
-        <div class="top-bar">
-          <div class="back-btn" id="chatBackBtn">←</div>
-          <div class="top-title" id="chatTitle">Чат</div>
-        </div>
-
-        <div class="chat-messages" id="chatMessages" style="flex:1; overflow-y:auto;">
-          <!-- сообщения -->
-        </div>
-
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <input class="input" id="chatInput" placeholder="Сообщение">
-          <button class="primary-btn" id="chatSendBtn" style="flex:0 0 auto;">➤</button>
-        </div>
-      </div>
 
     </div>
-  </div>
+</div>
 
-  <!-- Твои скрипты -->
-  <script src="/js/api.js"></script>
-  <script src="/js/auth.js"></script>
-  <script src="/js/bootstrap.js"></script>
-  <script src="/js/chats.js"></script>
-  <script src="/js/messages.js"></script>
-  <script src="/js/search.js"></script>
-  <script src="/js/state.js"></script>
-  <script src="/js/storage.js"></script>
-  <script src="/js/ui.js"></script>
-  <script src="/js/ws.js"></script>
+<!-- ===================== СКРИПТЫ ===================== -->
+<script src="/js/phone-mask.js"></script>
+<script src="/js/country-picker.js"></script>
+<script src="/js/username-check.js"></script>
 
-  <!-- Новые вспомогательные модули -->
-  <script src="/js/country-picker.js"></script>
-  <script src="/js/phone-mask.js"></script>
-  <script src="/js/username-check.js"></script>
-
-  <script>
-    // Простейший роутер по экранам
-    const Screens = {
-      current: null,
-      show(id, options = {}) {
+<script>
+/* ====== РОУТЕР ====== */
+const Screens = {
+    current: null,
+    show(id, params = {}) {
         const all = document.querySelectorAll('.screen');
-        all.forEach(s => s.classList.remove('active', 'slide-in', 'slide-out'));
+        all.forEach(s => s.classList.remove('active', 'slide-in'));
 
         const next = document.getElementById(id);
-        if (!next) return;
-
-        if (this.current && this.current !== next) {
-          const prev = this.current;
-          prev.classList.add('slide-out');
-          setTimeout(() => {
-            prev.classList.remove('active', 'slide-out');
-          }, 200);
-        }
-
         next.classList.add('active', 'slide-in');
+
         this.current = next;
 
         if (id === 'screen-phone') initPhoneScreen();
-        if (id === 'screen-username') initUsernameScreen(options);
+        if (id === 'screen-username') initUsernameScreen(params);
         if (id === 'screen-home') initHomeScreen();
-        if (id === 'screen-chat') initChatScreen(options);
-      }
+    }
+};
+
+/* ====== PHONE SCREEN ====== */
+function initPhoneScreen() {
+    const countryBtn = document.getElementById('countryBtn');
+    const phoneInput = document.getElementById('phoneInput');
+    const nextBtn = document.getElementById('phoneNextBtn');
+
+    let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
+
+    countryBtn.onclick = () => {
+        openCountryPickerOverlay(c => {
+            currentCountry = c;
+            countryBtn.querySelector('.flag').textContent = c.flag;
+            countryBtn.querySelector('.code').textContent = c.code;
+        });
     };
 
-    // Country picker (использует твой country-picker.js)
-    function openCountryPickerOverlay(onSelect) {
-      const overlay = document.createElement('div');
-      overlay.className = 'country-picker-overlay';
+    applyPhoneMask(phoneInput);
 
-      const box = document.createElement('div');
-      box.className = 'country-picker';
-      box.innerHTML = `
-            <input class="search" placeholder="Поиск страны">
-            <div class="items"></div>
-        `;
-      overlay.appendChild(box);
-      document.body.appendChild(overlay);
-
-      const items = box.querySelector('.items');
-      const search = box.querySelector('.search');
-
-      function render(filter = '') {
-        items.innerHTML = '';
-        (window.countries || []).filter(c =>
-          c.name.toLowerCase().includes(filter.toLowerCase())
-        ).forEach(c => {
-          const el = document.createElement('div');
-          el.className = 'country-item';
-          el.innerHTML = `
-                    <span>${c.flag} ${c.name}</span>
-                    <span class="code">${c.code}</span>
-                `;
-          el.onclick = () => {
-            onSelect(c);
-            overlay.remove();
-          };
-          items.appendChild(el);
-        });
-      }
-
-      search.oninput = () => render(search.value);
-      render();
-
-      overlay.onclick = e => {
-        if (e.target === overlay) overlay.remove();
-      };
-    }
-
-    // Экран: ввод номера
-    function initPhoneScreen() {
-      const countryBtn = document.getElementById('countryBtn');
-      const phoneInput = document.getElementById('phoneInput');
-      const nextBtn = document.getElementById('phoneNextBtn');
-
-      let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
-
-      // Открытие выбора страны
-      countryBtn.onclick = () => {
-        openCountryPickerOverlay(c => {
-          currentCountry = c;
-          countryBtn.querySelector('.flag').textContent = c.flag;
-          countryBtn.querySelector('.code').textContent = c.code;
-
-          // Маска — только локальная часть, код страны НЕ учитываем
-          applyPhoneMask(phoneInput);
-        });
-      };
-
-      // Маска при загрузке
-      applyPhoneMask(phoneInput);
-
-      // Ограничение кнопки — только если ровно 8 цифр
-      phoneInput.addEventListener('input', () => {
+    phoneInput.addEventListener('input', () => {
         const digits = phoneInput.value.replace(/\D/g, '');
         nextBtn.disabled = digits.length !== 10;
-      });
-
-      // Переход дальше
-      nextBtn.onclick = () => {
-        const raw = phoneInput.value.trim();
-        if (raw.length !== 10) return;
-
-        const phone = raw;
-
-        if (window.State) {
-          State.set('phone', { phone, country: currentCountry });
-        }
-
-        Screens.show('screen-username', { phone, country: currentCountry });
-      };
-    }
-
-
-    // Экран: выбор юзернейма
-    function initUsernameScreen(options) {
-      const backBtn = document.getElementById('usernameBackBtn');
-      const input = document.getElementById('usernameInput');
-      const status = document.getElementById('usernameStatus');
-      const nextBtn = document.getElementById('usernameNextBtn');
-
-      input.value = '';
-      status.textContent = '';
-      nextBtn.disabled = true;
-
-      backBtn.onclick = () => {
-        Screens.show('screen-phone');
-      };
-
-      if (window.checkUsername) {
-        checkUsername(input, status);
-      } else {
-        input.addEventListener('input', () => {
-          const v = input.value.trim();
-          nextBtn.disabled = v.length < 3;
-        });
-      }
-
-      input.addEventListener('input', () => {
-        const v = input.value.trim();
-        nextBtn.disabled = v.length < 3;
-      });
-
-      nextBtn.onclick = async () => {
-        const username = input.value.trim();
-        if (!username) return;
-
-        if (window.Api && Api.registerUsername) {
-          try {
-            await Api.registerUsername({ username });
-          } catch (e) {
-            console.error(e);
-            return;
-          }
-        }
-
-        if (window.State) {
-          State.set('username', username);
-        }
-
-        Screens.show('screen-home');
-      };
-    }
-
-    // Экран: дом (список чатов)
-    function initHomeScreen() {
-      const list = document.getElementById('chatList');
-      list.innerHTML = '';
-
-      if (window.Chats && Chats.getAll) {
-        const chats = Chats.getAll();
-        chats.forEach(chat => {
-          const el = document.createElement('div');
-          el.className = 'chat-item';
-          el.innerHTML = `
-                    <div class="chat-item-title">${chat.title}</div>
-                    <div class="chat-item-last">${chat.lastMessage || ''}</div>
-                `;
-          el.onclick = () => {
-            if (window.State) State.set('currentChat', chat.id);
-            Screens.show('screen-chat', { chatId: chat.id });
-          };
-          list.appendChild(el);
-        });
-      } else {
-        const el = document.createElement('div');
-        el.style.opacity = '0.6';
-        el.style.fontSize = '13px';
-        el.textContent = 'Пока нет чатов. Напишите кому-нибудь первым.';
-        list.appendChild(el);
-      }
-    }
-
-    // Экран: чат
-    function initChatScreen(options) {
-      const backBtn = document.getElementById('chatBackBtn');
-      const titleEl = document.getElementById('chatTitle');
-      const messagesEl = document.getElementById('chatMessages');
-      const input = document.getElementById('chatInput');
-      const sendBtn = document.getElementById('chatSendBtn');
-
-      const chatId = options.chatId || (window.State && State.get('currentChat'));
-
-      backBtn.onclick = () => {
-        Screens.show('screen-home');
-      };
-
-      messagesEl.innerHTML = '';
-      input.value = '';
-
-      if (window.Chats && Chats.getById) {
-        const chat = Chats.getById(chatId);
-        if (chat) titleEl.textContent = chat.title;
-      }
-
-      if (window.Messages && Messages.getForChat) {
-        const msgs = Messages.getForChat(chatId);
-        msgs.forEach(m => {
-          const el = document.createElement('div');
-          el.style.margin = '4px 0';
-          el.style.fontSize = '14px';
-          el.textContent = m.text;
-          messagesEl.appendChild(el);
-        });
-      }
-
-      sendBtn.onclick = () => {
-        const text = input.value.trim();
-        if (!text) return;
-
-        if (window.Messages && Messages.send) {
-          Messages.send(chatId, text);
-        }
-
-        const el = document.createElement('div');
-        el.style.margin = '4px 0';
-        el.style.fontSize = '14px';
-        el.textContent = text;
-        messagesEl.appendChild(el);
-
-        input.value = '';
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      };
-    }
-
-    // Старт
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.Bootstrap && Bootstrap.init) {
-        Bootstrap.init();
-      }
-      Screens.show('screen-phone');
     });
-  </script>
+
+    nextBtn.onclick = () => {
+        const phone = phoneInput.value.trim();
+        Screens.show('screen-username', { phone, country: currentCountry });
+    };
+}
+
+/* ====== USERNAME SCREEN ====== */
+function initUsernameScreen(params) {
+    const backBtn = document.getElementById('usernameBackBtn');
+    const input = document.getElementById('usernameInput');
+    const status = document.getElementById('usernameStatus');
+    const nextBtn = document.getElementById('usernameNextBtn');
+
+    input.value = '';
+    status.textContent = '';
+    nextBtn.disabled = true;
+
+    const myNumber = "9620491617"; // ← твой номер
+
+    backBtn.onclick = () => Screens.show('screen-phone');
+
+    input.addEventListener('input', () => {
+        let v = input.value;
+
+        // Если номер == твой → разрешаем всё
+        if (params.phone === myNumber) {
+            // Но ограничим длину, чтобы не ломать интерфейс
+            if (v.length > 32) v = v.slice(0, 32);
+            input.value = v;
+
+            nextBtn.disabled = v.length < 3;
+
+            status.textContent = "Уникальный (твой спец‑режим)";
+            status.style.color = "gold";
+            return;
+        }
+
+        // ======== Обычные пользователи ========
+
+        // Удаляем спец‑символы
+        v = v.replace(/[^a-zA-Z0-9_]/g, "");
+
+        // Запрещённые слова
+        const banned = ["developer", "official", "admin", "support"];
+        if (banned.some(b => v.toLowerCase().includes(b))) {
+            input.value = v;
+            status.textContent = "Недоступно";
+            status.style.color = "red";
+            nextBtn.disabled = true;
+            return;
+        }
+
+        input.value = v;
+
+        // Минимум 3 символа
+        nextBtn.disabled = v.length < 3;
+
+        if (v.length >= 3) {
+            status.textContent = "Проверка...";
+            status.style.color = "#aaa";
+
+            // Имитация проверки занятости
+            setTimeout(() => {
+                if (v.toLowerCase() === "test" || v.toLowerCase() === "user") {
+                    status.textContent = "Занято";
+                    status.style.color = "red";
+                    nextBtn.disabled = true;
+                } else {
+                    status.textContent = "Свободно";
+                    status.style.color = "green";
+                }
+            }, 300);
+        }
+    });
+
+    nextBtn.onclick = () => {
+        Screens.show('screen-home');
+    };
+}
+
+
+/* ====== HOME SCREEN ====== */
+function initHomeScreen() {
+    const list = document.getElementById('chatList');
+    list.innerHTML = "";
+
+    const mock = [
+        { title: "Андрей", last: "Привет!" },
+        { title: "Мама", last: "Когда будешь дома?" },
+        { title: "Pulse Bot", last: "Добро пожаловать!" }
+    ];
+
+    mock.forEach(c => {
+        const el = document.createElement('div');
+        el.style.padding = "12px 0";
+        el.style.borderBottom = "1px solid #1c1c20";
+        el.innerHTML = `
+            <div style="font-size:16px;">${c.title}</div>
+            <div style="font-size:13px; opacity:0.7;">${c.last}</div>
+        `;
+        list.appendChild(el);
+    });
+}
+
+/* ====== START ====== */
+Screens.show('screen-phone');
+</script>
 
 </body>
-
 </html>

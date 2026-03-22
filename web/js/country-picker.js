@@ -1,37 +1,45 @@
-const countries = [
-  { code: "+1", flag: "🇺🇸", name: "United States" },
-  { code: "+7", flag: "🇷🇺", name: "Russia" },
-  { code: "+49", flag: "🇩🇪", name: "Germany" },
-  { code: "+380", flag: "🇺🇦", name: "Ukraine" },
-  { code: "+44", flag: "🇬🇧", name: "United Kingdom" },
-  // добавлю все страны позже
+window.countries = [
+    { flag: "🇷🇺", code: "+7", name: "Russia" },
+    { flag: "🇰🇿", code: "+7", name: "Kazakhstan" },
+    { flag: "🇺🇸", code: "+1", name: "United States" },
+    { flag: "🇩🇪", code: "+49", name: "Germany" },
+    { flag: "🇬🇧", code: "+44", name: "United Kingdom" },
+    { flag: "🇺🇦", code: "+380", name: "Ukraine" },
+    { flag: "🇫🇷", code: "+33", name: "France" },
+    { flag: "🇮🇹", code: "+39", name: "Italy" },
+    { flag: "🇪🇸", code: "+34", name: "Spain" },
+    { flag: "🇨🇦", code: "+1", name: "Canada" },
 ];
+function openCountryPickerOverlay(onSelect) {
+    const overlay = document.createElement('div');
+    overlay.className = 'country-picker-overlay';
 
-function openCountryPicker(onSelect) {
-    const list = document.createElement("div");
-    list.className = "country-picker";
-
-    list.innerHTML = `
-        <input class="search" placeholder="Search country">
+    const box = document.createElement('div');
+    box.className = 'country-picker';
+    box.innerHTML = `
+        <input class="search" placeholder="Поиск страны">
         <div class="items"></div>
     `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
 
-    document.body.appendChild(list);
+    const items = box.querySelector('.items');
+    const search = box.querySelector('.search');
 
-    const items = list.querySelector(".items");
-    const search = list.querySelector(".search");
-
-    function render(filter = "") {
-        items.innerHTML = "";
-        countries
+    function render(filter = '') {
+        items.innerHTML = '';
+        window.countries
             .filter(c => c.name.toLowerCase().includes(filter.toLowerCase()))
             .forEach(c => {
-                const el = document.createElement("div");
-                el.className = "country-item";
-                el.innerHTML = `${c.flag} ${c.name} <span>${c.code}</span>`;
+                const el = document.createElement('div');
+                el.className = 'country-item';
+                el.innerHTML = `
+                    <span>${c.flag} ${c.name}</span>
+                    <span class="code">${c.code}</span>
+                `;
                 el.onclick = () => {
                     onSelect(c);
-                    list.remove();
+                    overlay.remove();
                 };
                 items.appendChild(el);
             });
@@ -39,4 +47,8 @@ function openCountryPicker(onSelect) {
 
     search.oninput = () => render(search.value);
     render();
+
+    overlay.onclick = e => {
+        if (e.target === overlay) overlay.remove();
+    };
 }
