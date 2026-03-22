@@ -1,62 +1,100 @@
-// chats.js
-import { dbGet, dbAll, dbRun } from "./db.js";
-import { now } from "./utils.js";
-import { getUserById } from "./users.js";
+// server/chats.js
+// Чаты: список, создание, личный чат
 
-export async function getOrCreateChat(user1, user2) {
-  const existing = await dbGet(
-    `
-    SELECT * FROM chats
-    WHERE (user1_id = ? AND user2_id = ?)
-       OR (user1_id = ? AND user2_id = ?)
-  `,
-    [user1, user2, user2, user1]
-  );
-  if (existing) return existing;
+const db = require("./db");
 
-  const res = await dbRun(
-    "INSERT INTO chats (user1_id, user2_id, created_at) VALUES (?, ?, ?)",
-    [user1, user2, now()]
+// Личный чат всегда один на пользователя
+async function ensureSelfChat(userId) {
+  const existing = await db.get(
+    "SELECT id FROM chats WHERE owner_id = ? AND is_self = 1",
+    [userId]
   );
-  return getChatById(res.id);
+  if (existing) return existing.id;
+
+  const res = await db.run(
+    "INSERT INTO chats (owner_id, peer_id, is_self, title) VALUES (?, NULL, 1, ?)",
+    [userId, "Личный чат"]
+  );
+  return res.lastID;
 }
 
-export async function getChatById(id) {
-  return dbGet("SELECT * FROM chats WHERE id = ?", [id]);
-}
+// GET /api/chats
+// Возвращает все чаты пользователя, включая личный
+async function getChats(req, res) {
+  try {
+    const userId = req.user.id;
 
-export async function getChatsForUser(userId) {
-  const rows = await dbAll(
-    `
-    SELECT c.id,
-           CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END AS peerId
-    FROM chats c
-    WHERE c.user1_id = ? OR c.user2_id = ?
-    ORDER BY c.id DESC
-  `,
-    [userId, userId, userId]
-  );
+    // гарантируем, что личный чат есть
+    await ensureSelfChat(userId);
 
-  const result = [];
-  for (const row of rows) {
-    const peer = await getUserById(row.peerId);
-    if (!peer) continue;
-
-    const lastMsg = await dbGet(
-      "SELECT text, created_at FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT 1",
-      [row.id]
+    const rows = await db.all(
+      `
+      SELECT id, owner_id, peer_id, is_self, title
+      FROM chats
+      WHERE owner_id = ?
+      ORDER BY id DESC
+    `,
+      [userId]
     );
 
-    result.push({
-      id: row.id,
-      peerId: row.peerId,
-      name: peer.name,
-      peerUsername: peer.username,
-      lastMessage: lastMsg?.text || "",
-      lastTime: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
-      unread: 0
-    });
+    res.json(rows);
+  } catch (e) {
+    console.error("getChats error:", e);
+    res.status(500).json({ error: "internal_error" });
   }
-
-  return result;
 }
+
+// POST /api/chats/with { peerId }
+// Создаёт или возвращает существующий чат с пользователем
+async function createOrGetChatWith(req, res) {
+  try {
+    const userId = req.user.id;
+    const { peerId } = req.body || {};
+
+    if (!peerId) {
+      return res.status(400).json({ error: "peer_required" });
+    }
+
+    // Личный чат
+    if (Number(peerId) === Number(userId)) {
+      const id = await ensureSelfChat(userId);
+      const chat = await db.get(
+        "SELECT id, owner_id, peer_id, is_self, title FROM chats WHERE id = ?",
+        [id]
+      );
+      return res.json(chat);
+    }
+
+    // Пытаемся найти уже существующий
+    let chat = await db.get(
+      `
+      SELECT id, owner_id, peer_id, is_self, title
+      FROM chats
+      WHERE owner_id = ? AND peer_id = ? AND is_self = 0
+    `,
+      [userId, peerId]
+    );
+
+    if (!chat) {
+      const resDb = await db.run(
+        "INSERT INTO chats (owner_id, peer_id, is_self, title) VALUES (?, ?, 0, ?)",
+        [userId, peerId, "Диалог"]
+      );
+      chat = await db.get(
+        "SELECT id, owner_id, peer_id, is_self, title FROM chats WHERE id = ?",
+        [resDb.lastID]
+      );
+    }
+
+    res.json(chat);
+  } catch (e) {
+    console.error("createOrGetChatWith error:", e);
+    res.status(500).json({ error: "internal_error" });
+  }
+}
+
+module.exports = {
+  ensureSelfChat,
+  getChats,
+  createOrGetChatWith
+};

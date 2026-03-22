@@ -1,14 +1,10 @@
 // api.js
 // Надёжный слой общения с backend
 
-// Базовый URL: можно держать относительным, чтобы работало и в вебе, и в Capacitor
 const BASE_URL =
   typeof window !== "undefined" && window.location.origin
     ? window.location.origin
     : "";
-
-// Если хочешь жёстко Railway — раскомментируй:
-// const BASE_URL = "https://pulse-production-1a74.up.railway.app";
 
 const DEFAULT_TIMEOUT = 15000;
 
@@ -37,6 +33,7 @@ async function request(path, options = {}) {
           "Content-Type": "application/json",
           ...(options.headers || {})
         },
+        credentials: "include",
         ...options
       })
     );
@@ -101,18 +98,17 @@ export function apiRegister({ phone, name, username, password }) {
 
 // ---------- CHATS ----------
 
-export function apiGetChats(userId) {
-  if (!userId) return Promise.reject(new Error("userId_required"));
-  return request(`/api/chats?userId=${encodeURIComponent(userId)}`);
+export function apiGetChats() {
+  return request(`/api/chats`);
 }
 
-export function apiCreateChat(user1, user2) {
-  if (!user1 || !user2) {
-    return Promise.reject(new Error("missing_users"));
+export function apiCreateChat(peerId) {
+  if (!peerId) {
+    return Promise.reject(new Error("peer_required"));
   }
-  return request("/api/createChat", {
+  return request("/api/chats/with", {
     method: "POST",
-    body: JSON.stringify({ user1, user2 })
+    body: JSON.stringify({ peerId })
   });
 }
 
@@ -132,7 +128,7 @@ export function apiGetMessages(chatId, userId) {
 export function apiFindUser(query) {
   const q = (query || "").trim();
   if (!q) return Promise.resolve([]);
-  return request(`/api/findUser?q=${encodeURIComponent(q)}`);
+  return request(`/api/users/search?q=${encodeURIComponent(q)}`);
 }
 
 export function apiSearchMessages(userId, query) {

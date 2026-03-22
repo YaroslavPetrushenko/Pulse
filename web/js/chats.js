@@ -4,13 +4,18 @@
 import { apiGetChats, apiCreateChat } from "./api.js";
 import { state, setCurrentChat } from "./state.js";
 import { saveChats, upsertChatInStorage } from "./storage.js";
-import { renderChats, renderChatHeader, renderMessages, openChatMobile } from "./ui.js";
+import {
+  renderChats,
+  renderChatHeader,
+  renderMessages,
+  openChatMobile
+} from "./ui.js";
 
 export async function loadChats() {
   if (!state.user) return;
 
   try {
-    const res = await apiGetChats(state.user.id);
+    const res = await apiGetChats();
     if (!Array.isArray(res)) return;
 
     state.chats = res;
@@ -22,8 +27,10 @@ export async function loadChats() {
 }
 
 export async function openChatWithUser(peerId) {
+  if (!peerId) return;
+
   try {
-    const chat = await apiCreateChat(state.user.id, peerId);
+    const chat = await apiCreateChat(peerId);
     if (!chat || !chat.id) return;
 
     upsertChatInStorage(chat);
@@ -34,6 +41,6 @@ export async function openChatWithUser(peerId) {
     renderMessages();
     openChatMobile();
   } catch (e) {
-    console.error("Ошибка создания чата:", e);
+    console.error("Ошибка создания/открытия чата:", e);
   }
 }

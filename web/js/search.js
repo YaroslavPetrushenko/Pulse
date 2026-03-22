@@ -4,12 +4,22 @@
 import { apiFindUser, apiSearchMessages } from "./api.js";
 import { state } from "./state.js";
 import { saveSearchHistory } from "./storage.js";
+import { openChatWithUser } from "./chats.js";
 
-const searchInput = document.getElementById("searchInput");
-const searchResults = document.getElementById("searchResults");
+let searchInput;
+let searchResults;
 
 export function initSearch() {
+  searchInput = document.getElementById("searchInput");
+  searchResults = document.getElementById("searchResults");
+
+  if (!searchInput || !searchResults) return;
+
   searchInput.oninput = onSearch;
+
+  if (state.searchHistory && state.searchHistory.length) {
+    renderHistory();
+  }
 }
 
 async function onSearch() {
@@ -34,7 +44,7 @@ async function onSearch() {
 
 function updateHistory(q) {
   if (!q) return;
-  const arr = state.searchHistory.filter(x => x !== q);
+  const arr = (state.searchHistory || []).filter(x => x !== q);
   arr.push(q);
   const last5 = arr.slice(-5);
   state.searchHistory = last5;
@@ -42,43 +52,73 @@ function updateHistory(q) {
 }
 
 function renderHistory() {
+  if (!searchResults) return;
+
   searchResults.innerHTML = `
     <div class="search-section-title">История</div>
-    ${state.searchHistory
-      .map(q => `<div class="search-item"><div class="search-item-main">${q}</div></div>`)
+    ${(state.searchHistory || [])
+      .map(
+        q => `
+      <div class="search-item">
+        <div class="search-item-main">${q}</div>
+      </div>`
+      )
       .join("")}
   `;
 }
 
 function renderResults(users, messages) {
+  if (!searchResults) return;
+
   searchResults.innerHTML = "";
 
-  if (users.length) {
-    searchResults.innerHTML += `<div class="search-section-title">Пользователи</div>`;
+  if (users && users.length) {
+    const title = document.createElement("div");
+    title.className = "search-section-title";
+    title.textContent = "Пользователи";
+    searchResults.appendChild(title);
+
     for (const u of users) {
-      searchResults.innerHTML += `
-        <div class="search-item">
-          <div class="search-item-avatar">${u.name[0]}</div>
-          <div class="search-item-main">
-            <div class="search-item-name">${u.name}</div>
-            <div class="search-item-username">${u.username}</div>
-          </div>
+      const el = document.createElement("div");
+      el.className = "search-item";
+      el.innerHTML = `
+        <div class="search-item-avatar">${(u.name || u.username || "?")[0]}</div>
+        <div class="search-item-main">
+          <div class="search-item-name">${u.name || ""}</div>
+          <div class="search-item-username">@${u.username}</div>
         </div>
       `;
+
+      el.onclick = () => {
+        if (u.id) {
+          openChatWithUser(u.id);
+        }
+      };
+
+      searchResults.appendChild(el);
     }
   }
 
-  if (messages.length) {
-    searchResults.innerHTML += `<div class="search-section-title">Сообщения</div>`;
+  if (messages && messages.length) {
+    const title = document.createElement("div");
+    title.className = "search-section-title";
+    title.textContent = "Сообщения";
+    searchResults.appendChild(title);
+
     for (const m of messages) {
-      searchResults.innerHTML += `
-        <div class="search-item">
-          <div class="search-item-main">
-            <div class="search-item-name">${m.peerName}</div>
-            <div class="search-item-snippet">${m.snippet}</div>
-          </div>
+      const el = document.createElement("div");
+      el.className = "search-item";
+      el.innerHTML = `
+        <div class="search-item-main">
+          <div class="search-item-name">${m.peerName}</div>
+          <div class="search-item-snippet">${m.snippet}</div>
         </div>
       `;
+      searchResults.appendChild(el);
     }
+  }
+
+  if ((!users || !users.length) && (!messages || !messages.length)) {
+    searchResults.innerHTML = `<div class="search-item">Ничего не найдено</div>`;
   }
 }
