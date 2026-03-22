@@ -358,9 +358,10 @@
     </div>
 
     <script>
-        // ===== ГЛОБАЛЬНОЕ СОСТОЯНИЕ / СЕССИЯ =====
+        // ===== КОНСТАНТЫ =====
         const SPECIAL_PHONE = "9620491617";
 
+        // ===== СЕССИЯ / ЛОКАЛЬНОЕ СОСТОЯНИЕ =====
         const Session = {
             user: null,
             chats: [],
@@ -403,7 +404,7 @@
 
         Session.load();
 
-        // ===== РОУТЕР =====
+        // ===== РОУТЕР ЭКРАНОВ =====
         const Screens = {
             current: null,
             show(id, params = {}) {
@@ -411,12 +412,13 @@
                 all.forEach(s => s.classList.remove('active', 'slide-in'));
 
                 const next = document.getElementById(id);
-                next.classList.add('active', 'slide-in');
+                if (!next) return;
 
+                next.classList.add('active', 'slide-in');
                 this.current = next;
 
                 if (id === 'screen-phone') initPhoneScreen();
-                if (id === 'screen-login') initLoginScreen();
+                if (id === 'screen-login') initLoginScreen(params);
                 if (id === 'screen-username') initUsernameScreen(params);
                 if (id === 'screen-password') initPasswordScreen();
                 if (id === 'screen-home') initHomeScreen();
@@ -445,9 +447,9 @@
             const box = document.createElement('div');
             box.className = 'country-picker';
             box.innerHTML = `
-            <input class="search" placeholder="Поиск страны">
-            <div class="items"></div>
-        `;
+        <input class="search" placeholder="Поиск страны">
+        <div class="items"></div>
+    `;
             overlay.appendChild(box);
             document.body.appendChild(overlay);
 
@@ -462,9 +464,9 @@
                         const el = document.createElement('div');
                         el.className = 'country-item';
                         el.innerHTML = `
-                        <span>${c.flag} ${c.name}</span>
-                        <span class="code">${c.code}</span>
-                    `;
+                    <span>${c.flag} ${c.name}</span>
+                    <span class="code">${c.code}</span>
+                `;
                         el.onclick = () => {
                             onSelect(c);
                             overlay.remove();
@@ -499,15 +501,20 @@
             const phoneInput = document.getElementById('phoneInput');
             const nextBtn = document.getElementById('phoneNextBtn');
 
-            let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
+            let currentCountry = Session.user?.country || { flag: '🇷🇺', code: '+7', name: 'Russia' };
 
-            countryBtn.onclick = () => {
-                openCountryPickerOverlay(c => {
-                    currentCountry = c;
-                    countryBtn.querySelector('.flag').textContent = c.flag;
-                    countryBtn.querySelector('.code').textContent = c.code;
-                });
-            };
+            if (countryBtn) {
+                countryBtn.querySelector('.flag').textContent = currentCountry.flag;
+                countryBtn.querySelector('.code').textContent = currentCountry.code;
+
+                countryBtn.onclick = () => {
+                    openCountryPickerOverlay(c => {
+                        currentCountry = c;
+                        countryBtn.querySelector('.flag').textContent = c.flag;
+                        countryBtn.querySelector('.code').textContent = c.code;
+                    });
+                };
+            }
 
             attachPhoneMask(phoneInput);
 
@@ -524,32 +531,60 @@
                 nextBtn.disabled = digits.length !== 10;
             };
 
-            nextBtn.onclick = () => {
+            nextBtn.onclick = async () => {
                 const digits = phoneInput.value.replace(/\D/g, '');
                 if (digits.length !== 10) return;
 
-                if (!Session.user) Session.user = {};
+                // сохраняем телефон локально
+                Session.user = Session.user || {};
                 Session.user.phone = digits;
                 Session.user.country = currentCountry;
                 Session.save();
 
-                Screens.show('screen-username', { phone: digits });
+                // проверяем на сервере, существует ли аккаунт
+                let exists = false;
+                try {
+                    const res = await fetch("/api/users/exists?phone=" + encodeURIComponent(digits), {
+                        credentials: "include"
+                    }).then(r => r.json());
+                    exists = !!res.exists;
+                } catch (e) {
+                    exists = false;
+                }
+
+                if (exists) {
+                    // аккаунт есть → логин
+                    Screens.show('screen-login', { phone: digits });
+                } else {
+                    // аккаунта нет → регистрация
+                    Screens.show('screen-username', { phone: digits });
+                }
             };
         }
 
-        function initLoginScreen() {
+        // ===== ЭКРАН: ЛОГИН =====
+        function initLoginScreen(params) {
             const phoneInput = document.getElementById("loginPhone");
             const passInput = document.getElementById("loginPassword");
             const loginBtn = document.getElementById("loginBtn");
 
+            if (!phoneInput || !passInput || !loginBtn) return;
+
             attachPhoneMask(phoneInput);
 
+            const phone = params.phone || Session.user?.phone || "";
+            phoneInput.value = phone;
+
             loginBtn.onclick = async () => {
-                const phone = phoneInput.value.trim();
+                const digits = phoneInput.value.replace(/\D/g, '');
                 const password = passInput.value.trim();
 
-                if (phone.length !== 10) {
+                if (digits.length !== 10) {
                     alert("Введите телефон");
+                    return;
+                }
+                if (!password) {
+                    alert("Введите пароль");
                     return;
                 }
 
@@ -557,7 +592,7 @@
                     method: "POST",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ phone, password })
+                    body: JSON.stringify({ phone: digits, password })
                 }).then(r => r.json());
 
                 if (res.error === "not_found") {
@@ -568,16 +603,22 @@
                     alert("Неверный пароль");
                     return;
                 }
+                if (!res.user) {
+                    alert("Ошибка входа");
+                    return;
+                }
 
-                // УСПЕШНЫЙ ВХОД
                 Session.user = res.user;
+                Session.save();
+
+                Session.ensureSelfChat();
                 Session.save();
 
                 Screens.show("screen-home");
             };
         }
 
-        // ===== ЭКРАН: ИМЯ + ЮЗЕРНЕЙМ =====
+        // ===== ЭКРАН: ИМЯ + ЮЗЕРНЕЙМ (РЕГИСТРАЦИЯ) =====
         function initUsernameScreen(params) {
             const backBtn = document.getElementById('usernameBackBtn');
             const nameInput = document.getElementById('nameInput');
@@ -650,7 +691,7 @@
             };
         }
 
-        // ===== ЭКРАН: ПАРОЛЬ (CLOUD PASSWORD) =====
+        // ===== ЭКРАН: ПАРОЛЬ (РЕГИСТРАЦИЯ) =====
         function initPasswordScreen() {
             const backBtn = document.getElementById('passwordBackBtn');
             const input = document.getElementById('passwordInput');
@@ -698,7 +739,7 @@
                 nextBtn.disabled = !s.ok;
             };
 
-            nextBtn.onclick = () => {
+            nextBtn.onclick = async () => {
                 const pwd = input.value;
                 const s = calcStrength(pwd);
                 if (!s.ok) return;
@@ -707,6 +748,32 @@
                 Session.user.password = pwd;
                 Session.save();
 
+                // РЕГИСТРАЦИЯ НА СЕРВЕРЕ
+                const body = {
+                    phone: Session.user.phone,
+                    name: Session.user.name,
+                    username: Session.user.username,
+                    password: Session.user.password
+                };
+
+                const res = await fetch("/api/users/register", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                }).then(r => r.json());
+
+                if (res.error) {
+                    alert("Ошибка регистрации: " + res.error);
+                    return;
+                }
+
+                if (!res.user) {
+                    alert("Ошибка регистрации");
+                    return;
+                }
+
+                Session.user = res.user;
                 Session.ensureSelfChat();
                 Session.save();
 
@@ -742,14 +809,13 @@
                     return;
                 }
 
-                // Поиск только самого себя
                 if (uname.toLowerCase().includes(q)) {
                     const el = document.createElement('div');
                     el.className = "chat-item";
                     el.innerHTML = `
-                    <div class="chat-item-title ${isSpecial ? 'gold' : ''}">@${uname}</div>
-                    <div class="chat-item-last" style="opacity:0.6;">Личный чат</div>
-                `;
+                <div class="chat-item-title ${isSpecial ? 'gold' : ''}">@${uname}</div>
+                <div class="chat-item-last" style="opacity:0.6;">Личный чат</div>
+            `;
                     el.onclick = () => {
                         Session.ensureSelfChat();
                         Session.save();
@@ -775,9 +841,9 @@
                     const el = document.createElement('div');
                     el.className = "chat-item";
                     el.innerHTML = `
-                    <div class="chat-item-title">${chat.title}</div>
-                    <div class="chat-item-last">${chat.lastMessage || ""}</div>
-                `;
+                <div class="chat-item-title">${chat.title}</div>
+                <div class="chat-item-last">${chat.lastMessage || ""}</div>
+            `;
                     el.onclick = () => {
                         Screens.show('screen-chat', { chatId: chat.id });
                     };
@@ -824,13 +890,13 @@
                 el.style.fontSize = "14px";
                 el.style.textAlign = m.from === "me" ? "right" : "left";
                 el.innerHTML = `
-                <span style="opacity:0.7; font-size:12px;">
-                    ${m.from === "me"
+            <span style="opacity:0.7; font-size:12px;">
+                ${m.from === "me"
                         ? (isSpecial ? '<span class="gold">@' + uname + '</span>' : '@' + uname)
                         : '@' + chat.username}
-                </span><br>
-                ${m.text}
-            `;
+            </span><br>
+            ${m.text}
+        `;
                 messagesEl.appendChild(el);
             });
             messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -852,11 +918,11 @@
                 el.style.fontSize = "14px";
                 el.style.textAlign = "right";
                 el.innerHTML = `
-                <span style="opacity:0.7; font-size:12px;">
-                    ${isSpecial ? '<span class="gold">@' + uname + '</span>' : '@' + uname}
-                </span><br>
-                ${text}
-            `;
+            <span style="opacity:0.7; font-size:12px;">
+                ${isSpecial ? '<span class="gold">@' + uname + '</span>' : '@' + uname}
+            </span><br>
+            ${text}
+        `;
                 messagesEl.appendChild(el);
 
                 input.value = "";
@@ -864,21 +930,26 @@
             };
         }
 
-        // ===== СТАРТ =====
+        // ===== СТАРТ: ПРОВЕРКА СЕССИИ НА СЕРВЕРЕ =====
         async function autoStart() {
-            const me = await fetch("/api/users/me", {
-                credentials: "include"
-            }).then(r => r.json());
+            try {
+                const me = await fetch("/api/users/me", {
+                    credentials: "include"
+                }).then(r => r.json());
 
-            if (me.user) {
-                Session.user = me.user;
-                Session.save();
-                Screens.show("screen-home");
-                return;
+                if (me && me.user) {
+                    Session.user = me.user;
+                    Session.ensureSelfChat();
+                    Session.save();
+                    Screens.show("screen-home");
+                    return;
+                }
+            } catch (e) {
+                // игнорируем, пойдём в обычный flow
             }
 
-            // если нет сессии → показываем логин
-            Screens.show("screen-login");
+            // если сервер не знает пользователя → начинаем с телефона
+            Screens.show("screen-phone");
         }
 
         autoStart();
