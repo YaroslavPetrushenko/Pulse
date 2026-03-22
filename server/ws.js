@@ -3,20 +3,16 @@ const cookie = require("cookie");
 const session = require("express-session");
 const { sessionSecret } = require("./config");
 
-function setupWebSocket(server, sessionStore) {
+function setupWebSocket(server) {
   const wss = new WebSocket.Server({ noServer: true });
 
   const sessionParser = session({
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    store: sessionStore,
   });
 
   server.on("upgrade", (req, socket, head) => {
-    const cookies = cookie.parse(req.headers.cookie || "");
-    req.cookies = cookies;
-
     sessionParser(req, {}, () => {
       if (!req.session || !req.session.userId) {
         socket.destroy();
@@ -30,19 +26,20 @@ function setupWebSocket(server, sessionStore) {
     });
   });
 
-  const clientsByChat = new Map(); // chatId -> Set(ws)
+  const clientsByChat = new Map();
 
   function subscribe(ws, chatId) {
     const id = String(chatId);
     if (!clientsByChat.has(id)) clientsByChat.set(id, new Set());
     clientsByChat.get(id).add(ws);
-    ws._chatSubs = ws._chatSubs || new Set();
-    ws._chatSubs.add(id);
+
+    ws._subs = ws._subs || new Set();
+    ws._subs.add(id);
   }
 
-  function unsubscribeAll(ws) {
-    if (!ws._chatSubs) return;
-    ws._chatSubs.forEach((id) => {
+  function unsubscribe(ws) {
+    if (!ws._subs) return;
+    ws._subs.forEach((id) => {
       const set = clientsByChat.get(id);
       if (set) {
         set.delete(ws);
@@ -55,11 +52,15 @@ function setupWebSocket(server, sessionStore) {
     const id = String(chatId);
     const set = clientsByChat.get(id);
     if (!set) return;
-    const payload = JSON.stringify({ type: "message", chatId, message });
+
+    const payload = JSON.stringify({
+      type: "message",
+      chatId,
+      message,
+    });
+
     set.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
-      }
+      if (ws.readyState === WebSocket.OPEN) ws.send(payload);
     });
   }
 
@@ -72,14 +73,12 @@ function setupWebSocket(server, sessionStore) {
         return;
       }
 
-      if (msg.type === "subscribe" && msg.chatId) {
+      if (msg.type === "subscribe") {
         subscribe(ws, msg.chatId);
       }
     });
 
-    ws.on("close", () => {
-      unsubscribeAll(ws);
-    });
+    ws.on("close", () => unsubscribe(ws));
   });
 
   return { wss, broadcastMessage };

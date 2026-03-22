@@ -1,6 +1,5 @@
 const express = require("express");
 const session = require("express-session");
-const SQLiteStore = require("connect-sqlite3")(session);
 const path = require("path");
 const http = require("http");
 const cors = require("cors");
@@ -15,21 +14,16 @@ const setupWebSocket = require("./ws");
 const app = express();
 const server = http.createServer(app);
 
-const sessionStore = new SQLiteStore({
-  db: "sessions.db",
-  dir: process.cwd(),
-});
-
-const sessionMiddleware = session({
-  store: sessionStore,
-  secret: config.sessionSecret,
-  resave: false,
-  saveUninitialized: false,
-});
-
 app.use(cors({ origin: true, credentials: true }));
 app.use(bodyParser.json());
-app.use(sessionMiddleware);
+
+app.use(
+  session({
+    secret: config.sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+  })
+);
 
 app.use(express.static(path.join(__dirname, "..", "web")));
 
@@ -37,13 +31,8 @@ app.use("/api/users", usersRouter);
 app.use("/api/chats", chatsRouter);
 app.use("/api/messages", messagesRouter);
 
-const { wss, broadcastMessage } = setupWebSocket(server, sessionStore);
-app.locals.wss = wss;
+const { wss, broadcastMessage } = setupWebSocket(server, null);
 app.locals.broadcastMessage = broadcastMessage;
-
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true });
-});
 
 server.listen(config.port, () => {
   console.log(`Pulse server listening on port ${config.port}`);
