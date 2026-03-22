@@ -701,7 +701,6 @@
         }
 
         // ===== ЭКРАН: ПАРОЛЬ (РЕГИСТРАЦИЯ) =====
-        // ===== ЭКРАН: ПАРОЛЬ (РЕГИСТРАЦИЯ) =====
         function initPasswordScreen() {
             const backBtn = document.getElementById('passwordBackBtn');
             const input = document.getElementById('passwordInput');
@@ -763,7 +762,6 @@
                 Session.user.password = pwd;
                 Session.save();
 
-                // РЕГИСТРАЦИЯ НА СЕРВЕРЕ
                 const body = {
                     phone: Session.user.phone,
                     name: Session.user.name,
@@ -789,6 +787,7 @@
 
                 Screens.show('screen-home');
             };
+
         }
 
 
