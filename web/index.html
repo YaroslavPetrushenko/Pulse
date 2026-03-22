@@ -1,601 +1,618 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-    <meta charset="UTF-8">
-    <title>Pulse</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Pulse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Твои стили -->
-    <link rel="stylesheet" href="/css/app.css">
+  <!-- Твои стили -->
+  <link rel="stylesheet" href="/css/app.css">
 
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            background: #000;
-            color: #fff;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
 
-        .app {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: stretch;
-        }
+    .app {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
 
-        .app-inner {
-            width: 100%;
-            max-width: 480px;
-            height: 100%;
-            background: #050509;
-            display: flex;
-            flex-direction: column;
-        }
+    .app-inner {
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      background: #050509;
+      display: flex;
+      flex-direction: column;
+    }
 
-        .screen {
-            flex: 1;
-            display: none;
-            flex-direction: column;
-            padding: 16px;
-        }
+    .screen {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      padding: 16px;
+    }
 
-        .screen.active {
-            display: flex;
-        }
+    .screen.active {
+      display: flex;
+    }
 
-        .screen-header {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 16px;
-        }
+    .screen-header {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
 
-        .screen-subtitle {
-            font-size: 14px;
-            opacity: 0.7;
-            margin-bottom: 24px;
-        }
+    .screen-subtitle {
+      font-size: 14px;
+      opacity: 0.7;
+      margin-bottom: 24px;
+    }
 
-        .field-label {
-            font-size: 13px;
-            opacity: 0.8;
-            margin-bottom: 6px;
-        }
+    .field-label {
+      font-size: 13px;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
 
-        .phone-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
+    .phone-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
 
-        .country-btn {
-            min-width: 110px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid #333;
-            background: #111;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            font-size: 14px;
-        }
+    .country-btn {
+      min-width: 110px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
-        .country-btn span.code {
-            opacity: 0.8;
-            margin-left: 6px;
-        }
+    .country-btn span.code {
+      opacity: 0.8;
+      margin-left: 6px;
+    }
 
-        .input {
-            flex: 1;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid #333;
-            background: #111;
-            color: #fff;
-            font-size: 14px;
-            outline: none;
-        }
+    .input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
 
-        .primary-btn {
-            margin-top: auto;
-            padding: 12px;
-            border-radius: 12px;
-            border: none;
-            background: #4b6cff;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
+    .primary-btn {
+      margin-top: auto;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #4b6cff;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
 
-        .primary-btn:disabled {
-            opacity: 0.4;
-            cursor: default;
-        }
+    .primary-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
 
-        .link {
-            color: #4b6cff;
-            cursor: pointer;
-        }
+    .link {
+      color: #4b6cff;
+      cursor: pointer;
+    }
 
-        .username-status {
-            font-size: 12px;
-            margin-top: 4px;
-        }
+    .username-status {
+      font-size: 12px;
+      margin-top: 4px;
+    }
 
-        /* Country picker */
-        .country-picker-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            z-index: 1000;
-        }
+    /* Country picker */
+    .country-picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 1000;
+    }
 
-        .country-picker {
-            width: 100%;
-            max-width: 480px;
-            max-height: 70%;
-            background: #111;
-            border-radius: 16px 16px 0 0;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-        }
+    .country-picker {
+      width: 100%;
+      max-width: 480px;
+      max-height: 70%;
+      background: #111;
+      border-radius: 16px 16px 0 0;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+    }
 
-        .country-picker input.search {
-            padding: 8px 10px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            background: #050509;
-            color: #fff;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
+    .country-picker input.search {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #050509;
+      color: #fff;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
 
-        .country-picker .items {
-            overflow-y: auto;
-        }
+    .country-picker .items {
+      overflow-y: auto;
+    }
 
-        .country-item {
-            padding: 8px 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            font-size: 14px;
-        }
+    .country-item {
+      padding: 8px 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
-        .country-item span.code {
-            opacity: 0.8;
-        }
+    .country-item span.code {
+      opacity: 0.8;
+    }
 
-        .country-item:hover {
-            background: #1a1a1a;
-        }
+    .country-item:hover {
+      background: #1a1a1a;
+    }
 
-        /* Простые анимации экранов */
-        .screen {
-            position: relative;
-        }
+    /* Простые анимации экранов */
+    .screen {
+      position: relative;
+    }
 
-        .screen.slide-in {
-            animation: slideIn .25s ease forwards;
-        }
+    .screen.slide-in {
+      animation: slideIn .25s ease forwards;
+    }
 
-        .screen.slide-out {
-            animation: slideOut .25s ease forwards;
-        }
+    .screen.slide-out {
+      animation: slideOut .25s ease forwards;
+    }
 
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to   { transform: translateX(0); opacity: 1; }
-        }
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
 
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to   { transform: translateX(-20%); opacity: 0; }
-        }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
 
-        /* Заглушки для home/chats — ты потом заменишь на свой UI */
-        .chat-list {
-            flex: 1;
-            overflow-y: auto;
-        }
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
 
-        .chat-item {
-            padding: 10px 0;
-            border-bottom: 1px solid #181818;
-            cursor: pointer;
-        }
+      to {
+        transform: translateX(-20%);
+        opacity: 0;
+      }
+    }
 
-        .chat-item-title {
-            font-size: 15px;
-        }
+    /* Заглушки для home/chats — ты потом заменишь на свой UI */
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+    }
 
-        .chat-item-last {
-            font-size: 12px;
-            opacity: 0.7;
-        }
+    .chat-item {
+      padding: 10px 0;
+      border-bottom: 1px solid #181818;
+      cursor: pointer;
+    }
 
-        .top-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
+    .chat-item-title {
+      font-size: 15px;
+    }
 
-        .back-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 999px;
-            border: 1px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 16px;
-        }
+    .chat-item-last {
+      font-size: 12px;
+      opacity: 0.7;
+    }
 
-        .top-title {
-            font-size: 16px;
-            font-weight: 600;
-        }
-    </style>
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .back-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .top-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+  </style>
 </head>
 
 <body>
-<div class="app">
+  <div class="app">
     <div class="app-inner">
 
-        <!-- Экран: ввод номера -->
-        <div class="screen" id="screen-phone">
-            <div class="screen-header">Ваш номер телефона</div>
-            <div class="screen-subtitle">
-                Мы отправим код подтверждения в SMS или мессенджер.
-            </div>
-
-            <div class="field-label">Страна и номер</div>
-            <div class="phone-row">
-                <button class="country-btn" id="countryBtn">
-                    <span class="flag">🇷🇺</span>
-                    <span class="code">+7</span>
-                </button>
-                <input class="input" id="phoneInput" placeholder="Номер телефона" inputmode="tel">
-            </div>
-
-            <button class="primary-btn" id="phoneNextBtn">Продолжить</button>
+      <!-- Экран: ввод номера -->
+      <div class="screen" id="screen-phone">
+        <div class="screen-header">Ваш номер телефона</div>
+        <div class="screen-subtitle">
+          Мы отправим код подтверждения в SMS или мессенджер.
         </div>
 
-        <!-- Экран: выбор юзернейма -->
-        <div class="screen" id="screen-username">
-            <div class="top-bar">
-                <div class="back-btn" id="usernameBackBtn">←</div>
-                <div class="top-title">Имя пользователя</div>
-            </div>
-
-            <div class="screen-subtitle">
-                Выберите уникальное имя, по которому вас смогут найти.
-            </div>
-
-            <div class="field-label">Юзернейм</div>
-            <input class="input" id="usernameInput" placeholder="@username">
-            <div class="username-status" id="usernameStatus"></div>
-
-            <button class="primary-btn" id="usernameNextBtn">Продолжить</button>
+        <div class="field-label">Страна и номер</div>
+        <div class="phone-row">
+          <button class="country-btn" id="countryBtn">
+            <span class="flag">🇷🇺</span>
+            <span class="code">+7</span>
+          </button>
+          <input class="input" id="phoneInput" placeholder="Номер телефона" inputmode="tel">
         </div>
 
-        <!-- Экран: список чатов (дом) -->
-        <div class="screen" id="screen-home">
-            <div class="top-bar">
-                <div class="top-title">Pulse</div>
-            </div>
+        <button class="primary-btn" id="phoneNextBtn">Продолжить</button>
+      </div>
 
-            <div class="chat-list" id="chatList">
-                <!-- сюда потом твой UI чатов -->
-            </div>
+      <!-- Экран: выбор юзернейма -->
+      <div class="screen" id="screen-username">
+        <div class="top-bar">
+          <div class="back-btn" id="usernameBackBtn">←</div>
+          <div class="top-title">Имя пользователя</div>
         </div>
 
-        <!-- Экран: чат -->
-        <div class="screen" id="screen-chat">
-            <div class="top-bar">
-                <div class="back-btn" id="chatBackBtn">←</div>
-                <div class="top-title" id="chatTitle">Чат</div>
-            </div>
-
-            <div class="chat-messages" id="chatMessages" style="flex:1; overflow-y:auto;">
-                <!-- сообщения -->
-            </div>
-
-            <div style="display:flex; gap:8px; margin-top:8px;">
-                <input class="input" id="chatInput" placeholder="Сообщение">
-                <button class="primary-btn" id="chatSendBtn" style="flex:0 0 auto;">➤</button>
-            </div>
+        <div class="screen-subtitle">
+          Выберите уникальное имя, по которому вас смогут найти.
         </div>
+
+        <div class="field-label">Юзернейм</div>
+        <input class="input" id="usernameInput" placeholder="@username">
+        <div class="username-status" id="usernameStatus"></div>
+
+        <button class="primary-btn" id="usernameNextBtn">Продолжить</button>
+      </div>
+
+      <!-- Экран: список чатов (дом) -->
+      <div class="screen" id="screen-home">
+        <div class="top-bar">
+          <div class="top-title">Pulse</div>
+        </div>
+
+        <div class="chat-list" id="chatList">
+          <!-- сюда потом твой UI чатов -->
+        </div>
+      </div>
+
+      <!-- Экран: чат -->
+      <div class="screen" id="screen-chat">
+        <div class="top-bar">
+          <div class="back-btn" id="chatBackBtn">←</div>
+          <div class="top-title" id="chatTitle">Чат</div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages" style="flex:1; overflow-y:auto;">
+          <!-- сообщения -->
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <input class="input" id="chatInput" placeholder="Сообщение">
+          <button class="primary-btn" id="chatSendBtn" style="flex:0 0 auto;">➤</button>
+        </div>
+      </div>
 
     </div>
-</div>
+  </div>
 
-<!-- Твои скрипты -->
-<script src="/js/api.js"></script>
-<script src="/js/auth.js"></script>
-<script src="/js/bootstrap.js"></script>
-<script src="/js/chats.js"></script>
-<script src="/js/messages.js"></script>
-<script src="/js/search.js"></script>
-<script src="/js/state.js"></script>
-<script src="/js/storage.js"></script>
-<script src="/js/ui.js"></script>
-<script src="/js/ws.js"></script>
+  <!-- Твои скрипты -->
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/bootstrap.js"></script>
+  <script src="/js/chats.js"></script>
+  <script src="/js/messages.js"></script>
+  <script src="/js/search.js"></script>
+  <script src="/js/state.js"></script>
+  <script src="/js/storage.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/ws.js"></script>
 
-<!-- Новые вспомогательные модули -->
-<script src="/js/country-picker.js"></script>
-<script src="/js/phone-mask.js"></script>
-<script src="/js/username-check.js"></script>
+  <!-- Новые вспомогательные модули -->
+  <script src="/js/country-picker.js"></script>
+  <script src="/js/phone-mask.js"></script>
+  <script src="/js/username-check.js"></script>
 
-<script>
+  <script>
     // Простейший роутер по экранам
     const Screens = {
-        current: null,
-        show(id, options = {}) {
-            const all = document.querySelectorAll('.screen');
-            all.forEach(s => s.classList.remove('active', 'slide-in', 'slide-out'));
+      current: null,
+      show(id, options = {}) {
+        const all = document.querySelectorAll('.screen');
+        all.forEach(s => s.classList.remove('active', 'slide-in', 'slide-out'));
 
-            const next = document.getElementById(id);
-            if (!next) return;
+        const next = document.getElementById(id);
+        if (!next) return;
 
-            if (this.current && this.current !== next) {
-                const prev = this.current;
-                prev.classList.add('slide-out');
-                setTimeout(() => {
-                    prev.classList.remove('active', 'slide-out');
-                }, 200);
-            }
-
-            next.classList.add('active', 'slide-in');
-            this.current = next;
-
-            if (id === 'screen-phone') initPhoneScreen();
-            if (id === 'screen-username') initUsernameScreen(options);
-            if (id === 'screen-home') initHomeScreen();
-            if (id === 'screen-chat') initChatScreen(options);
+        if (this.current && this.current !== next) {
+          const prev = this.current;
+          prev.classList.add('slide-out');
+          setTimeout(() => {
+            prev.classList.remove('active', 'slide-out');
+          }, 200);
         }
+
+        next.classList.add('active', 'slide-in');
+        this.current = next;
+
+        if (id === 'screen-phone') initPhoneScreen();
+        if (id === 'screen-username') initUsernameScreen(options);
+        if (id === 'screen-home') initHomeScreen();
+        if (id === 'screen-chat') initChatScreen(options);
+      }
     };
 
     // Country picker (использует твой country-picker.js)
     function openCountryPickerOverlay(onSelect) {
-        const overlay = document.createElement('div');
-        overlay.className = 'country-picker-overlay';
+      const overlay = document.createElement('div');
+      overlay.className = 'country-picker-overlay';
 
-        const box = document.createElement('div');
-        box.className = 'country-picker';
-        box.innerHTML = `
+      const box = document.createElement('div');
+      box.className = 'country-picker';
+      box.innerHTML = `
             <input class="search" placeholder="Поиск страны">
             <div class="items"></div>
         `;
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
 
-        const items = box.querySelector('.items');
-        const search = box.querySelector('.search');
+      const items = box.querySelector('.items');
+      const search = box.querySelector('.search');
 
-        function render(filter = '') {
-            items.innerHTML = '';
-            (window.countries || []).filter(c =>
-                c.name.toLowerCase().includes(filter.toLowerCase())
-            ).forEach(c => {
-                const el = document.createElement('div');
-                el.className = 'country-item';
-                el.innerHTML = `
+      function render(filter = '') {
+        items.innerHTML = '';
+        (window.countries || []).filter(c =>
+          c.name.toLowerCase().includes(filter.toLowerCase())
+        ).forEach(c => {
+          const el = document.createElement('div');
+          el.className = 'country-item';
+          el.innerHTML = `
                     <span>${c.flag} ${c.name}</span>
                     <span class="code">${c.code}</span>
                 `;
-                el.onclick = () => {
-                    onSelect(c);
-                    overlay.remove();
-                };
-                items.appendChild(el);
-            });
-        }
+          el.onclick = () => {
+            onSelect(c);
+            overlay.remove();
+          };
+          items.appendChild(el);
+        });
+      }
 
-        search.oninput = () => render(search.value);
-        render();
+      search.oninput = () => render(search.value);
+      render();
 
-        overlay.onclick = e => {
-            if (e.target === overlay) overlay.remove();
-        };
+      overlay.onclick = e => {
+        if (e.target === overlay) overlay.remove();
+      };
     }
 
     // Экран: ввод номера
     function initPhoneScreen() {
-    const countryBtn = document.getElementById('countryBtn');
-    const phoneInput = document.getElementById('phoneInput');
-    const nextBtn = document.getElementById('phoneNextBtn');
+      const countryBtn = document.getElementById('countryBtn');
+      const phoneInput = document.getElementById('phoneInput');
+      const nextBtn = document.getElementById('phoneNextBtn');
 
-    let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
+      let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
 
-    // Открытие выбора страны
-    countryBtn.onclick = () => {
+      // Открытие выбора страны
+      countryBtn.onclick = () => {
         openCountryPickerOverlay(c => {
-            currentCountry = c;
-            countryBtn.querySelector('.flag').textContent = c.flag;
-            countryBtn.querySelector('.code').textContent = c.code;
+          currentCountry = c;
+          countryBtn.querySelector('.flag').textContent = c.flag;
+          countryBtn.querySelector('.code').textContent = c.code;
 
-            // Маска — только локальная часть, код страны НЕ учитываем
-            applyPhoneMask(phoneInput);
+          // Маска — только локальная часть, код страны НЕ учитываем
+          applyPhoneMask(phoneInput);
         });
-    };
+      };
 
-    // Маска при загрузке
-    applyPhoneMask(phoneInput);
+      // Маска при загрузке
+      applyPhoneMask(phoneInput);
 
-    // Ограничение кнопки — только если ровно 8 цифр
-    phoneInput.addEventListener('input', () => {
+      // Ограничение кнопки — только если ровно 8 цифр
+      phoneInput.addEventListener('input', () => {
         const digits = phoneInput.value.replace(/\D/g, '');
-        nextBtn.disabled = digits.length !== 8;
-    });
+        nextBtn.disabled = digits.length !== 10;
+      });
 
-    // Переход дальше
-    nextBtn.onclick = () => {
+      // Переход дальше
+      nextBtn.onclick = () => {
         const raw = phoneInput.value.trim();
-        if (raw.length !== 8) return;
+        if (raw.length !== 10) return;
 
         const phone = raw;
 
         if (window.State) {
-            State.set('phone', { phone, country: currentCountry });
+          State.set('phone', { phone, country: currentCountry });
         }
 
         Screens.show('screen-username', { phone, country: currentCountry });
-    };
-}
+      };
+    }
 
 
     // Экран: выбор юзернейма
     function initUsernameScreen(options) {
-        const backBtn = document.getElementById('usernameBackBtn');
-        const input = document.getElementById('usernameInput');
-        const status = document.getElementById('usernameStatus');
-        const nextBtn = document.getElementById('usernameNextBtn');
+      const backBtn = document.getElementById('usernameBackBtn');
+      const input = document.getElementById('usernameInput');
+      const status = document.getElementById('usernameStatus');
+      const nextBtn = document.getElementById('usernameNextBtn');
 
-        input.value = '';
-        status.textContent = '';
-        nextBtn.disabled = true;
+      input.value = '';
+      status.textContent = '';
+      nextBtn.disabled = true;
 
-        backBtn.onclick = () => {
-            Screens.show('screen-phone');
-        };
+      backBtn.onclick = () => {
+        Screens.show('screen-phone');
+      };
 
-        if (window.checkUsername) {
-            checkUsername(input, status);
-        } else {
-            input.addEventListener('input', () => {
-                const v = input.value.trim();
-                nextBtn.disabled = v.length < 3;
-            });
+      if (window.checkUsername) {
+        checkUsername(input, status);
+      } else {
+        input.addEventListener('input', () => {
+          const v = input.value.trim();
+          nextBtn.disabled = v.length < 3;
+        });
+      }
+
+      input.addEventListener('input', () => {
+        const v = input.value.trim();
+        nextBtn.disabled = v.length < 3;
+      });
+
+      nextBtn.onclick = async () => {
+        const username = input.value.trim();
+        if (!username) return;
+
+        if (window.Api && Api.registerUsername) {
+          try {
+            await Api.registerUsername({ username });
+          } catch (e) {
+            console.error(e);
+            return;
+          }
         }
 
-        input.addEventListener('input', () => {
-            const v = input.value.trim();
-            nextBtn.disabled = v.length < 3;
-        });
+        if (window.State) {
+          State.set('username', username);
+        }
 
-        nextBtn.onclick = async () => {
-            const username = input.value.trim();
-            if (!username) return;
-
-            if (window.Api && Api.registerUsername) {
-                try {
-                    await Api.registerUsername({ username });
-                } catch (e) {
-                    console.error(e);
-                    return;
-                }
-            }
-
-            if (window.State) {
-                State.set('username', username);
-            }
-
-            Screens.show('screen-home');
-        };
+        Screens.show('screen-home');
+      };
     }
 
     // Экран: дом (список чатов)
     function initHomeScreen() {
-        const list = document.getElementById('chatList');
-        list.innerHTML = '';
+      const list = document.getElementById('chatList');
+      list.innerHTML = '';
 
-        if (window.Chats && Chats.getAll) {
-            const chats = Chats.getAll();
-            chats.forEach(chat => {
-                const el = document.createElement('div');
-                el.className = 'chat-item';
-                el.innerHTML = `
+      if (window.Chats && Chats.getAll) {
+        const chats = Chats.getAll();
+        chats.forEach(chat => {
+          const el = document.createElement('div');
+          el.className = 'chat-item';
+          el.innerHTML = `
                     <div class="chat-item-title">${chat.title}</div>
                     <div class="chat-item-last">${chat.lastMessage || ''}</div>
                 `;
-                el.onclick = () => {
-                    if (window.State) State.set('currentChat', chat.id);
-                    Screens.show('screen-chat', { chatId: chat.id });
-                };
-                list.appendChild(el);
-            });
-        } else {
-            const el = document.createElement('div');
-            el.style.opacity = '0.6';
-            el.style.fontSize = '13px';
-            el.textContent = 'Пока нет чатов. Напишите кому-нибудь первым.';
-            list.appendChild(el);
-        }
+          el.onclick = () => {
+            if (window.State) State.set('currentChat', chat.id);
+            Screens.show('screen-chat', { chatId: chat.id });
+          };
+          list.appendChild(el);
+        });
+      } else {
+        const el = document.createElement('div');
+        el.style.opacity = '0.6';
+        el.style.fontSize = '13px';
+        el.textContent = 'Пока нет чатов. Напишите кому-нибудь первым.';
+        list.appendChild(el);
+      }
     }
 
     // Экран: чат
     function initChatScreen(options) {
-        const backBtn = document.getElementById('chatBackBtn');
-        const titleEl = document.getElementById('chatTitle');
-        const messagesEl = document.getElementById('chatMessages');
-        const input = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('chatSendBtn');
+      const backBtn = document.getElementById('chatBackBtn');
+      const titleEl = document.getElementById('chatTitle');
+      const messagesEl = document.getElementById('chatMessages');
+      const input = document.getElementById('chatInput');
+      const sendBtn = document.getElementById('chatSendBtn');
 
-        const chatId = options.chatId || (window.State && State.get('currentChat'));
+      const chatId = options.chatId || (window.State && State.get('currentChat'));
 
-        backBtn.onclick = () => {
-            Screens.show('screen-home');
-        };
+      backBtn.onclick = () => {
+        Screens.show('screen-home');
+      };
 
-        messagesEl.innerHTML = '';
+      messagesEl.innerHTML = '';
+      input.value = '';
+
+      if (window.Chats && Chats.getById) {
+        const chat = Chats.getById(chatId);
+        if (chat) titleEl.textContent = chat.title;
+      }
+
+      if (window.Messages && Messages.getForChat) {
+        const msgs = Messages.getForChat(chatId);
+        msgs.forEach(m => {
+          const el = document.createElement('div');
+          el.style.margin = '4px 0';
+          el.style.fontSize = '14px';
+          el.textContent = m.text;
+          messagesEl.appendChild(el);
+        });
+      }
+
+      sendBtn.onclick = () => {
+        const text = input.value.trim();
+        if (!text) return;
+
+        if (window.Messages && Messages.send) {
+          Messages.send(chatId, text);
+        }
+
+        const el = document.createElement('div');
+        el.style.margin = '4px 0';
+        el.style.fontSize = '14px';
+        el.textContent = text;
+        messagesEl.appendChild(el);
+
         input.value = '';
-
-        if (window.Chats && Chats.getById) {
-            const chat = Chats.getById(chatId);
-            if (chat) titleEl.textContent = chat.title;
-        }
-
-        if (window.Messages && Messages.getForChat) {
-            const msgs = Messages.getForChat(chatId);
-            msgs.forEach(m => {
-                const el = document.createElement('div');
-                el.style.margin = '4px 0';
-                el.style.fontSize = '14px';
-                el.textContent = m.text;
-                messagesEl.appendChild(el);
-            });
-        }
-
-        sendBtn.onclick = () => {
-            const text = input.value.trim();
-            if (!text) return;
-
-            if (window.Messages && Messages.send) {
-                Messages.send(chatId, text);
-            }
-
-            const el = document.createElement('div');
-            el.style.margin = '4px 0';
-            el.style.fontSize = '14px';
-            el.textContent = text;
-            messagesEl.appendChild(el);
-
-            input.value = '';
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        };
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      };
     }
 
     // Старт
     document.addEventListener('DOMContentLoaded', () => {
-        if (window.Bootstrap && Bootstrap.init) {
-            Bootstrap.init();
-        }
-        Screens.show('screen-phone');
+      if (window.Bootstrap && Bootstrap.init) {
+        Bootstrap.init();
+      }
+      Screens.show('screen-phone');
     });
-</script>
+  </script>
 
 </body>
+
 </html>
