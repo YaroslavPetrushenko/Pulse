@@ -2,7 +2,6 @@
   "name": "pulse-messenger",
   "version": "1.0.0",
   "description": "Pulse Messenger Server",
-  "type": "module",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
