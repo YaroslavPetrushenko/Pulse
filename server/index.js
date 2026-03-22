@@ -1,5 +1,6 @@
 const express = require("express");
 const session = require("express-session");
+const SQLiteStore = require("connect-sqlite3")(session);
 const path = require("path");
 const http = require("http");
 const cors = require("cors");
@@ -19,6 +20,10 @@ app.use(bodyParser.json());
 
 app.use(
   session({
+    store: new SQLiteStore({
+      db: "sessions.db",
+      dir: process.cwd(),
+    }),
     secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -31,7 +36,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/chats", chatsRouter);
 app.use("/api/messages", messagesRouter);
 
-const { wss, broadcastMessage } = setupWebSocket(server, null);
+const { wss, broadcastMessage } = setupWebSocket(server);
 app.locals.broadcastMessage = broadcastMessage;
 
 server.listen(config.port, () => {
