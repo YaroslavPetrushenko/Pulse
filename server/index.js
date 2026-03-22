@@ -45,6 +45,8 @@ app.use("/api/messages", messagesRouter);
 const { wss, broadcastMessage } = setupWebSocket(server);
 app.locals.broadcastMessage = broadcastMessage;
 
-server.listen(config.port, () => {
-  console.log(`Pulse server listening on port ${config.port}`);
+const PORT = process.env.PORT || config.port;
+server.listen(PORT, () => {
+  console.log(`Pulse server listening on port ${PORT}`);
 });
+
