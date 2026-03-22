@@ -865,15 +865,24 @@
         }
 
         // ===== СТАРТ =====
-        if (Session.user && Session.user.phone && Session.user.username && Session.user.password) {
-            Session.ensureSelfChat();
-            Session.save();
-            Screens.show('screen-home');
-        } else if (Session.user && Session.user.phone) {
-            Screens.show('screen-username', { phone: Session.user.phone });
-        } else {
-            Screens.show('screen-phone');
+        async function autoStart() {
+            const me = await fetch("/api/users/me", {
+                credentials: "include"
+            }).then(r => r.json());
+
+            if (me.user) {
+                Session.user = me.user;
+                Session.save();
+                Screens.show("screen-home");
+                return;
+            }
+
+            // если нет сессии → показываем логин
+            Screens.show("screen-login");
         }
+
+        autoStart();
+
     </script>
 
 </body>
