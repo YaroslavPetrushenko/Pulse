@@ -2,4 +2,4 @@
 builder = "NIXPACKS"
 
 [deploy]
-start = "node server.js"
+start = "node server/index.js"
