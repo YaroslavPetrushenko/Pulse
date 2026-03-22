@@ -1,112 +1,89 @@
-// messages.js
-// Идеальная логика сообщений: загрузка, отправка, синхронизация, рендер
-
-import { apiGetMessages } from "./api.js";
-import { state, appendMessage } from "./state.js";
-import {
-  saveMessages,
-  addMessageToStorage
-} from "./storage.js";
-import { renderMessages } from "./ui.js";
-import { wsSendMessage } from "./ws.js";
-
-// DOM элементы
-const msgInput = document.getElementById("msgInput");
-const msgSendBtn = document.getElementById("msgSendBtn");
-
-// Флаг, чтобы не было двойной загрузки
-let loadingMessages = false;
-
-// Инициализация
-export function initMessages() {
-  msgInput.addEventListener("input", () => {
-    msgSendBtn.classList.toggle("hidden", !msgInput.value.trim());
-  });
-
-  msgSendBtn.onclick = sendMessage;
-}
-
-// -------------------------
-// ЗАГРУЗКА ИСТОРИИ ЧАТА
-// -------------------------
-
-export async function loadMessages(chatId) {
-  if (!chatId || !state.user) return;
-  if (loadingMessages) return;
-
-  loadingMessages = true;
-
-  try {
-    const list = await apiGetMessages(chatId, state.user.id);
-
-    if (!Array.isArray(list)) {
-      console.warn("Некорректный формат сообщений");
-      return;
-    }
-
-    // Сохраняем в state
-    state.messages[chatId] = list;
-
-    // Сохраняем локально
-    saveMessages(chatId, list);
-
-    // Рендерим
-    renderMessages();
-  } catch (e) {
-    console.error("Ошибка загрузки сообщений:", e);
-  } finally {
-    loadingMessages = false;
-  }
-}
-
-// -------------------------
-// ОТПРАВКА СООБЩЕНИЯ
-// -------------------------
-
-async function sendMessage() {
-  const text = msgInput.value.trim();
-  if (!text) return;
-
-  const chatId = state.currentChatId;
-  if (!chatId) return;
-
-  // Локальный оптимистичный рендер
-  const tempMessage = {
-    id: "temp_" + Date.now(),
-    chat_id: chatId,
-    sender_id: state.user.id,
-    text,
-    created_at: Date.now()
+const Messages = (() => {
+  const selectors = {
+    list: "#message-list",
+    form: "#message-form",
+    input: "#message-input",
   };
 
-  appendMessage(chatId, tempMessage);
-  addMessageToStorage(chatId, tempMessage);
-  renderMessages();
-
-  // Очищаем поле
-  msgInput.value = "";
-  msgSendBtn.classList.add("hidden");
-
-  // Отправляем через WebSocket
-  try {
-    wsSendMessage(chatId, text);
-  } catch (e) {
-    console.error("Ошибка отправки WS:", e);
+  async function loadMessages(chatId) {
+    try {
+      const { messages } = await API.getMessages(chatId);
+      State.setMessages(chatId, messages);
+      renderMessages(chatId);
+    } catch {
+      UI.showError("Не удалось загрузить сообщения");
+    }
   }
-}
 
-// -------------------------
-// ПРИЁМ СООБЩЕНИЯ (вызывается из ws.js)
-// -------------------------
+  function renderMessages(chatId) {
+    const container = document.querySelector(selectors.list);
+    if (!container) return;
 
-export function onIncomingMessage(msg) {
-  const chatId = msg.chat_id;
+    const msgs = State.getMessages(chatId);
+    container.innerHTML = "";
 
-  appendMessage(chatId, msg);
-  addMessageToStorage(chatId, msg);
+    msgs.forEach((m) => {
+      const item = document.createElement("div");
+      item.className = "message-item";
 
-  // Если открыт этот чат — обновляем UI
-  if (state.currentChatId === chatId) {
-    renderMessages();
+      const me = State.user && State.user.id === m.sender_id;
+      item.classList.add(me ? "from-me" : "from-them");
+
+      const name = m.sender_name || m.sender_username || "User";
+      const text = document.createElement("div");
+      text.className = "message-text";
+      text.textContent = m.content;
+
+      const meta = document.createElement("div");
+      meta.className = "message-meta";
+      meta.textContent = name;
+
+      item.appendChild(meta);
+      item.appendChild(text);
+      container.appendChild(item);
+    });
+
+    container.scrollTop = container.scrollHeight;
   }
-}
+
+  function setupSendForm() {
+    const form = document.querySelector(selectors.form);
+    const input = document.querySelector(selectors.input);
+    if (!form || !input) return;
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const chatId = State.currentChatId;
+      if (!chatId) return;
+
+      const content = input.value.trim();
+      if (!content) return;
+
+      input.value = "";
+
+      try {
+        const { message } = await API.sendMessage(chatId, content);
+        State.addMessage(chatId, message);
+        renderMessages(chatId);
+      } catch {
+        UI.showError("Не удалось отправить сообщение");
+      }
+    });
+
+    WS.onMessage((msg) => {
+      if (msg.type === "message") {
+        const { chatId, message } = msg;
+        State.addMessage(chatId, message);
+        if (State.currentChatId === chatId) {
+          renderMessages(chatId);
+        }
+      }
+    });
+  }
+
+  return {
+    loadMessages,
+    renderMessages,
+    setupSendForm,
+  };
+})();

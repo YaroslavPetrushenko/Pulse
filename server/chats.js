@@ -1,99 +1,70 @@
-// server/chats.js
-// Чаты: список, создание, личный чат
-
+const express = require("express");
 const db = require("./db");
 
-// Личный чат всегда один
-async function ensureSelfChat(userId) {
-  const existing = await db.get(
-    "SELECT id FROM chats WHERE owner_id = ? AND is_self = 1",
-    [userId]
+const router = express.Router();
+
+// список чатов пользователя
+router.get("/", (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: "unauthorized" });
+
+  const userId = req.session.userId;
+
+  db.all(
+    `
+    SELECT c.id, c.title, c.is_direct, c.created_at
+    FROM chats c
+    JOIN chat_members m ON m.chat_id = c.id
+    WHERE m.user_id = ?
+    ORDER BY c.created_at DESC
+  `,
+    [userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "db_error" });
+      res.json({ chats: rows });
+    }
   );
-  if (existing) return existing.id;
+});
 
-  const res = await db.run(
-    "INSERT INTO chats (owner_id, peer_id, is_self, title) VALUES (?, NULL, 1, ?)",
-    [userId, "Чат"] // ← НЕ «ЛИЧНЫЙ ЧАТ», а просто ЧАТ
+// создать direct‑чат с другим пользователем
+router.post("/direct", (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: "unauthorized" });
+
+  const userId = req.session.userId;
+  const { otherUserId } = req.body || {};
+  if (!otherUserId) return res.status(400).json({ error: "missing_otherUserId" });
+
+  db.get(
+    `
+    SELECT c.id
+    FROM chats c
+    JOIN chat_members m1 ON m1.chat_id = c.id AND m1.user_id = ?
+    JOIN chat_members m2 ON m2.chat_id = c.id AND m2.user_id = ?
+    WHERE c.is_direct = 1
+  `,
+    [userId, otherUserId],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: "db_error" });
+      if (row) return res.json({ chatId: row.id });
+
+      db.run(
+        "INSERT INTO chats (title, is_direct) VALUES (?, 1)",
+        [null],
+        function (e2) {
+          if (e2) return res.status(500).json({ error: "db_error" });
+
+          const chatId = this.lastID;
+          const stmt = db.prepare(
+            "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)"
+          );
+          stmt.run(chatId, userId, "member");
+          stmt.run(chatId, otherUserId, "member", (e3) => {
+            if (e3) return res.status(500).json({ error: "db_error" });
+            res.json({ chatId });
+          });
+        }
+      );
+    }
   );
-  return res.lastID;
-}
+});
 
-// GET /api/chats
-async function getChats(req, res) {
-  try {
-    const userId = req.user.id;
-
-    // гарантируем личный чат
-    await ensureSelfChat(userId);
-
-    const rows = await db.all(
-      `
-      SELECT id, owner_id, peer_id, is_self, title
-      FROM chats
-      WHERE owner_id = ?
-      ORDER BY id DESC
-    `,
-      [userId]
-    );
-
-    res.json(rows);
-  } catch (e) {
-    console.error("getChats error:", e);
-    res.status(500).json({ error: "internal_error" });
-  }
-}
-
-// POST /api/chats/with { peerId }
-async function createOrGetChatWith(req, res) {
-  try {
-    const userId = req.user.id;
-    const { peerId } = req.body || {};
-
-    if (!peerId) {
-      return res.status(400).json({ error: "peer_required" });
-    }
-
-    // Чат с самим собой
-    if (Number(peerId) === Number(userId)) {
-      const id = await ensureSelfChat(userId);
-      const chat = await db.get(
-        "SELECT id, owner_id, peer_id, is_self, title FROM chats WHERE id = ?",
-        [id]
-      );
-      return res.json(chat);
-    }
-
-    // Ищем существующий
-    let chat = await db.get(
-      `
-      SELECT id, owner_id, peer_id, is_self, title
-      FROM chats
-      WHERE owner_id = ? AND peer_id = ? AND is_self = 0
-    `,
-      [userId, peerId]
-    );
-
-    // Если нет — создаём
-    if (!chat) {
-      const resDb = await db.run(
-        "INSERT INTO chats (owner_id, peer_id, is_self, title) VALUES (?, ?, 0, ?)",
-        [userId, peerId, "Чат"]
-      );
-      chat = await db.get(
-        "SELECT id, owner_id, peer_id, is_self, title FROM chats WHERE id = ?",
-        [resDb.lastID]
-      );
-    }
-
-    res.json(chat);
-  } catch (e) {
-    console.error("createOrGetChatWith error:", e);
-    res.status(500).json({ error: "internal_error" });
-  }
-}
-
-module.exports = {
-  ensureSelfChat,
-  getChats,
-  createOrGetChatWith
-};
+module.exports = router;

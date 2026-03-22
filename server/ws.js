@@ -1,64 +1,88 @@
-// ws.js
-import { WebSocketServer } from "ws";
-import { WS_PATH } from "./config.js";
-import { addMessage } from "./messages.js";
-import { getOrCreateChat } from "./chats.js";
+const WebSocket = require("ws");
+const cookie = require("cookie");
+const session = require("express-session");
+const { sessionSecret } = require("./config");
 
-const clients = new Map(); // userId -> Set(ws)
+function setupWebSocket(server, sessionStore) {
+  const wss = new WebSocket.Server({ noServer: true });
 
-export function initWs(server) {
-  const wss = new WebSocketServer({ server, path: WS_PATH });
+  const sessionParser = session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    store: sessionStore,
+  });
 
-  wss.on("connection", (ws, req) => {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const userId = url.searchParams.get("userId");
+  server.on("upgrade", (req, socket, head) => {
+    const cookies = cookie.parse(req.headers.cookie || "");
+    req.cookies = cookies;
 
-    if (!userId) {
-      ws.close();
-      return;
-    }
-
-    if (!clients.has(userId)) clients.set(userId, new Set());
-    clients.get(userId).add(ws);
-
-    ws.on("close", () => {
-      const set = clients.get(userId);
-      if (!set) return;
-      set.delete(ws);
-      if (!set.size) clients.delete(userId);
-    });
-
-    ws.on("message", async data => {
-      try {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === "send") {
-          const { to, text } = msg;
-          if (!to || !text) return;
-
-          const chat = await getOrCreateChat(Number(userId), Number(to));
-          const saved = await addMessage(chat.id, Number(userId), text);
-
-          const payload = JSON.stringify({
-            type: "message",
-            message: saved
-          });
-
-          broadcastToUser(userId, payload);
-          broadcastToUser(String(to), payload);
-        }
-      } catch (e) {
-        console.error("WS message error:", e);
+    sessionParser(req, {}, () => {
+      if (!req.session || !req.session.userId) {
+        socket.destroy();
+        return;
       }
+
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        ws.userId = req.session.userId;
+        wss.emit("connection", ws, req);
+      });
     });
   });
+
+  const clientsByChat = new Map(); // chatId -> Set(ws)
+
+  function subscribe(ws, chatId) {
+    const id = String(chatId);
+    if (!clientsByChat.has(id)) clientsByChat.set(id, new Set());
+    clientsByChat.get(id).add(ws);
+    ws._chatSubs = ws._chatSubs || new Set();
+    ws._chatSubs.add(id);
+  }
+
+  function unsubscribeAll(ws) {
+    if (!ws._chatSubs) return;
+    ws._chatSubs.forEach((id) => {
+      const set = clientsByChat.get(id);
+      if (set) {
+        set.delete(ws);
+        if (!set.size) clientsByChat.delete(id);
+      }
+    });
+  }
+
+  function broadcastMessage(chatId, message) {
+    const id = String(chatId);
+    const set = clientsByChat.get(id);
+    if (!set) return;
+    const payload = JSON.stringify({ type: "message", chatId, message });
+    set.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(payload);
+      }
+    });
+  }
+
+  wss.on("connection", (ws) => {
+    ws.on("message", (data) => {
+      let msg;
+      try {
+        msg = JSON.parse(data.toString());
+      } catch {
+        return;
+      }
+
+      if (msg.type === "subscribe" && msg.chatId) {
+        subscribe(ws, msg.chatId);
+      }
+    });
+
+    ws.on("close", () => {
+      unsubscribeAll(ws);
+    });
+  });
+
+  return { wss, broadcastMessage };
 }
 
-function broadcastToUser(userId, payload) {
-  const set = clients.get(String(userId));
-  if (!set) return;
-  for (const ws of set) {
-    if (ws.readyState === ws.OPEN) {
-      ws.send(payload);
-    }
-  }
-}
+module.exports = setupWebSocket;

@@ -1,54 +1,65 @@
-window.countries = [
-    { flag: "🇷🇺", code: "+7", name: "Russia" },
-    { flag: "🇰🇿", code: "+7", name: "Kazakhstan" },
-    { flag: "🇺🇸", code: "+1", name: "United States" },
-    { flag: "🇩🇪", code: "+49", name: "Germany" },
-    { flag: "🇬🇧", code: "+44", name: "United Kingdom" },
-    { flag: "🇺🇦", code: "+380", name: "Ukraine" },
-    { flag: "🇫🇷", code: "+33", name: "France" },
-    { flag: "🇮🇹", code: "+39", name: "Italy" },
-    { flag: "🇪🇸", code: "+34", name: "Spain" },
-    { flag: "🇨🇦", code: "+1", name: "Canada" },
-];
-function openCountryPickerOverlay(onSelect) {
-    const overlay = document.createElement('div');
-    overlay.className = 'country-picker-overlay';
+const CountryPicker = (() => {
+  const countries = [
+    { code: "RU", name: "Россия", dial: "+7", flag: "🇷🇺" },
+    { code: "UA", name: "Украина", dial: "+380", flag: "🇺🇦" },
+    { code: "KZ", name: "Казахстан", dial: "+7", flag: "🇰🇿" },
+    { code: "BY", name: "Беларусь", dial: "+375", flag: "🇧🇾" },
+    { code: "GE", name: "Грузия", dial: "+995", flag: "🇬🇪" },
+    { code: "AM", name: "Армения", dial: "+374", flag: "🇦🇲" },
+    { code: "KG", name: "Киргизия", dial: "+996", flag: "🇰🇬" },
+    { code: "UZ", name: "Узбекистан", dial: "+998", flag: "🇺🇿" },
+    { code: "TJ", name: "Таджикистан", dial: "+992", flag: "🇹🇯" },
+    { code: "TR", name: "Турция", dial: "+90", flag: "🇹🇷" },
+    { code: "DE", name: "Германия", dial: "+49", flag: "🇩🇪" },
+    { code: "PL", name: "Польша", dial: "+48", flag: "🇵🇱" },
+    { code: "US", name: "США", dial: "+1", flag: "🇺🇸" },
+  ];
 
-    const box = document.createElement('div');
-    box.className = 'country-picker';
-    box.innerHTML = `
-        <input class="search" placeholder="Поиск страны">
-        <div class="items"></div>
-    `;
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
+  let picker = null;
+  let phoneInput = null;
 
-    const items = box.querySelector('.items');
-    const search = box.querySelector('.search');
+  function populate() {
+    picker.innerHTML = "";
+    countries.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.dial;
+      opt.textContent = `${c.flag} ${c.name} (${c.dial})`;
+      picker.appendChild(opt);
+    });
+  }
 
-    function render(filter = '') {
-        items.innerHTML = '';
-        window.countries
-            .filter(c => c.name.toLowerCase().includes(filter.toLowerCase()))
-            .forEach(c => {
-                const el = document.createElement('div');
-                el.className = 'country-item';
-                el.innerHTML = `
-                    <span>${c.flag} ${c.name}</span>
-                    <span class="code">${c.code}</span>
-                `;
-                el.onclick = () => {
-                    onSelect(c);
-                    overlay.remove();
-                };
-                items.appendChild(el);
-            });
-    }
+  function applyDialCode() {
+    const dial = picker.value;
+    if (!dial || !phoneInput) return;
 
-    search.oninput = () => render(search.value);
-    render();
+    let raw = phoneInput.value.replace(/\D/g, "");
+    raw = raw.replace(/^7/, ""); // убираем старый код
+    raw = raw.replace(/^1/, "");
+    raw = raw.replace(/^49/, "");
 
-    overlay.onclick = e => {
-        if (e.target === overlay) overlay.remove();
-    };
-}
+    phoneInput.value = dial + " " + raw;
+  }
+
+  function setup() {
+    picker = document.querySelector("#country-picker");
+    phoneInput = document.querySelector("[data-phone]");
+
+    if (!picker || !phoneInput) return;
+
+    populate();
+
+    picker.addEventListener("change", () => {
+      applyDialCode();
+      PhoneMask.format(phoneInput);
+    });
+
+    phoneInput.addEventListener("focus", () => {
+      if (!phoneInput.value.trim()) {
+        applyDialCode();
+        PhoneMask.format(phoneInput);
+      }
+    });
+  }
+
+  return { setup };
+})();

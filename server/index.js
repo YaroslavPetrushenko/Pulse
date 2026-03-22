@@ -1,39 +1,50 @@
 const express = require("express");
 const session = require("express-session");
-const users = require("./users");
-const chats = require("./chats");
+const SQLiteStore = require("connect-sqlite3")(session);
+const path = require("path");
+const http = require("http");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+
+const config = require("./config");
+const usersRouter = require("./users");
+const chatsRouter = require("./chats");
+const messagesRouter = require("./messages");
+const setupWebSocket = require("./ws");
 
 const app = express();
+const server = http.createServer(app);
 
-app.use(express.json());
-app.use(
-  session({
-    secret: "pulse-secret",
-    resave: false,
-    saveUninitialized: false
-  })
-);
+const sessionStore = new SQLiteStore({
+  db: "sessions.db",
+  dir: process.cwd(),
+});
 
-// простая auth-прокладка
-function auth(req, res, next) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-  req.user = { id: req.session.userId };
-  next();
-}
+const sessionMiddleware = session({
+  store: sessionStore,
+  secret: config.sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+});
 
-// AUTH
-app.get("/api/checkUser", users.checkUser);
-app.get("/api/checkUsername", users.checkUsername);
-app.post("/api/register", users.register);
-app.post("/api/login", users.login);
+app.use(cors({ origin: true, credentials: true }));
+app.use(bodyParser.json());
+app.use(sessionMiddleware);
 
-// CHATS
-app.get("/api/chats", auth, chats.getChats);
-app.post("/api/chats/with", auth, chats.createOrGetChatWith);
+app.use(express.static(path.join(__dirname, "..", "web")));
 
-// USERS SEARCH
-app.get("/api/users/search", auth, users.searchUsers);
+app.use("/api/users", usersRouter);
+app.use("/api/chats", chatsRouter);
+app.use("/api/messages", messagesRouter);
 
-module.exports = app;
+const { wss, broadcastMessage } = setupWebSocket(server, sessionStore);
+app.locals.wss = wss;
+app.locals.broadcastMessage = broadcastMessage;
+
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
+});
+
+server.listen(config.port, () => {
+  console.log(`Pulse server listening on port ${config.port}`);
+});

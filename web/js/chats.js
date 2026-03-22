@@ -1,46 +1,46 @@
-// chats.js
-// Работа со списком чатов
+const Chats = (() => {
+  const selectors = {
+    list: "#chat-list",
+  };
 
-import { apiGetChats, apiCreateChat } from "./api.js";
-import { state, setCurrentChat } from "./state.js";
-import { saveChats, upsertChatInStorage } from "./storage.js";
-import {
-  renderChats,
-  renderChatHeader,
-  renderMessages,
-  openChatMobile
-} from "./ui.js";
-
-export async function loadChats() {
-  if (!state.user) return;
-
-  try {
-    const res = await apiGetChats();
-    if (!Array.isArray(res)) return;
-
-    state.chats = res;
-    saveChats(res);
-    renderChats();
-  } catch (e) {
-    console.error("Ошибка загрузки чатов:", e);
+  async function loadChats() {
+    try {
+      const { chats } = await API.getChats();
+      State.setChats(chats);
+      renderChats();
+    } catch {
+      UI.showError("Не удалось загрузить чаты");
+    }
   }
-}
 
-export async function openChatWithUser(peerId) {
-  if (!peerId) return;
+  function renderChats() {
+    const container = document.querySelector(selectors.list);
+    if (!container) return;
 
-  try {
-    const chat = await apiCreateChat(peerId);
-    if (!chat || !chat.id) return;
+    const chats = State.chats;
+    container.innerHTML = "";
 
-    upsertChatInStorage(chat);
-    setCurrentChat(chat.id);
+    chats.forEach((chat) => {
+      const item = document.createElement("div");
+      item.className = "chat-item";
+      item.dataset.chatId = chat.id;
 
-    renderChats();
-    renderChatHeader();
-    renderMessages();
-    openChatMobile();
-  } catch (e) {
-    console.error("Ошибка создания/открытия чата:", e);
+      const title = chat.title || "Диалог #" + chat.id;
+      item.textContent = title;
+
+      item.addEventListener("click", async () => {
+        State.setCurrentChatId(chat.id);
+        UI.highlightChat(chat.id);
+        await Messages.loadMessages(chat.id);
+        WS.subscribeChat(chat.id);
+      });
+
+      container.appendChild(item);
+    });
   }
-}
+
+  return {
+    loadChats,
+    renderChats,
+  };
+})();

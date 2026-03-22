@@ -1,160 +1,99 @@
-// server/users.js
-// Пользователи: регистрация, логин, проверки, поиск
-
+const express = require("express");
 const db = require("./db");
-const bcrypt = require("bcrypt");
-const { ensureSelfChat } = require("./chats");
+const { hashPassword, comparePassword, sanitizeUser } = require("./utils");
 
-const SPECIAL_PHONE = "9620491617";
+const router = express.Router();
 
-// GET /api/checkUser?phone=
-async function checkUser(req, res) {
-  try {
-    const phone = (req.query.phone || "").trim();
-    if (!phone) return res.status(400).json({ error: "phone_required" });
+// текущий пользователь
+router.get("/me", (req, res) => {
+  if (!req.session.userId) return res.json({ user: null });
 
-    const user = await db.get(
-      "SELECT id, phone, name, username FROM users WHERE phone = ?",
-      [phone]
-    );
+  db.get(
+    "SELECT * FROM users WHERE id = ?",
+    [req.session.userId],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: "db_error" });
+      res.json({ user: sanitizeUser(row) });
+    }
+  );
+});
 
-    if (!user) return res.json({ exists: false });
-    res.json({ exists: true, user });
-  } catch (e) {
-    console.error("checkUser error:", e);
-    res.status(500).json({ error: "internal_error" });
+// регистрация
+router.post("/register", (req, res) => {
+  const { phone, name, username, password } = req.body || {};
+  if (!phone || !name || !username || !password) {
+    return res.status(400).json({ error: "missing_fields" });
   }
-}
 
-// GET /api/checkUsername?u=
-async function checkUsername(req, res) {
-  try {
-    const username = (req.query.u || "").trim();
-    if (!username) return res.status(400).json({ error: "username_required" });
+  const passwordHash = hashPassword(password);
 
-    const row = await db.get(
-      "SELECT id FROM users WHERE LOWER(username) = LOWER(?)",
-      [username]
-    );
-
-    res.json({ available: !row });
-  } catch (e) {
-    console.error("checkUsername error:", e);
-    res.status(500).json({ error: "internal_error" });
-  }
-}
-
-// POST /api/register
-async function register(req, res) {
-  try {
-    const { phone, name, username, password } = req.body || {};
-    if (!phone || !name || !username || !password) {
-      return res.status(400).json({ error: "missing_fields" });
+  const stmt = db.prepare(
+    "INSERT INTO users (phone, name, username, password_hash) VALUES (?, ?, ?, ?)"
+  );
+  stmt.run(phone, name, username, passwordHash, function (err) {
+    if (err) {
+      if (err.message.includes("UNIQUE")) {
+        return res.status(409).json({ error: "user_exists" });
+      }
+      return res.status(500).json({ error: "db_error" });
     }
 
-    const existing = await db.get(
-      "SELECT id FROM users WHERE phone = ? OR LOWER(username) = LOWER(?)",
-      [phone, username]
-    );
-    if (existing) {
-      return res.status(409).json({ error: "user_exists" });
-    }
+    const userId = this.lastID;
+    req.session.userId = userId;
 
-    const hash = await bcrypt.hash(password, 10);
-    const isSpecial = phone === SPECIAL_PHONE ? 1 : 0;
-
-    const resDb = await db.run(
-      `
-      INSERT INTO users (phone, name, username, password_hash, is_special)
-      VALUES (?, ?, ?, ?, ?)
-    `,
-      [phone, name, username, hash, isSpecial]
-    );
-
-    const user = await db.get(
-      "SELECT id, phone, name, username, is_special FROM users WHERE id = ?",
-      [resDb.lastID]
-    );
-
-    // создаём личный чат
-    await ensureSelfChat(user.id);
-
-    req.session.userId = user.id;
-
-    res.json(user);
-  } catch (e) {
-    console.error("register error:", e);
-    res.status(500).json({ error: "internal_error" });
-  }
-}
-
-// POST /api/login
-async function login(req, res) {
-  try {
-    const { phone, password } = req.body || {};
-    if (!phone || !password) {
-      return res.status(400).json({ error: "missing_credentials" });
-    }
-
-    const user = await db.get(
-      "SELECT id, phone, name, username, password_hash, is_special FROM users WHERE phone = ?",
-      [phone]
-    );
-    if (!user) {
-      return res.status(401).json({ error: "invalid_credentials" });
-    }
-
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) {
-      return res.status(401).json({ error: "invalid_credentials" });
-    }
-
-    // гарантируем личный чат
-    await ensureSelfChat(user.id);
-
-    req.session.userId = user.id;
-
-    res.json({
-      id: user.id,
-      phone: user.phone,
-      name: user.name,
-      username: user.username,
-      is_special: user.is_special
+    db.get("SELECT * FROM users WHERE id = ?", [userId], (e2, row) => {
+      if (e2) return res.status(500).json({ error: "db_error" });
+      res.json({ user: sanitizeUser(row) });
     });
-  } catch (e) {
-    console.error("login error:", e);
-    res.status(500).json({ error: "internal_error" });
+  });
+});
+
+// логин
+router.post("/login", (req, res) => {
+  const { phone, password } = req.body || {};
+  if (!phone || !password) {
+    return res.status(400).json({ error: "missing_fields" });
   }
-}
 
-// GET /api/users/search?q=
-async function searchUsers(req, res) {
-  try {
-    const q = (req.query.q || "").trim().toLowerCase();
-    if (!q) return res.json([]);
+  db.get("SELECT * FROM users WHERE phone = ?", [phone], (err, user) => {
+    if (err) return res.status(500).json({ error: "db_error" });
+    if (!user) return res.status(401).json({ error: "invalid_credentials" });
 
-    const rows = await db.all(
-      `
-      SELECT id, username, name
-      FROM users
-      WHERE LOWER(username) LIKE ?
-      ORDER BY id
-      LIMIT 20
-    `,
-      [`%${q}%`]
-    );
+    const ok = comparePassword(password, user.password_hash);
+    if (!ok) return res.status(401).json({ error: "invalid_credentials" });
 
-    res.json(rows);
-  } catch (e) {
-    console.error("searchUsers error:", e);
-    res.status(500).json({ error: "internal_error" });
-  }
-}
+    req.session.userId = user.id;
+    res.json({ user: sanitizeUser(user) });
+  });
+});
 
-module.exports = {
-  checkUser,
-  checkUsername,
-  register,
-  login,
-  searchUsers
-};
+// logout
+router.post("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.json({ ok: true });
+  });
+});
+
+// поиск пользователей
+router.get("/search", (req, res) => {
+  const q = (req.query.q || "").trim();
+  if (!q) return res.json({ users: [] });
+
+  const like = `%${q}%`;
+  db.all(
+    `
+    SELECT id, phone, name, username, created_at
+    FROM users
+    WHERE phone LIKE ? OR name LIKE ? OR username LIKE ?
+    ORDER BY created_at DESC
+    LIMIT 50
+  `,
+    [like, like, like],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "db_error" });
+      res.json({ users: rows });
+    }
+  );
+});
+
+module.exports = router;

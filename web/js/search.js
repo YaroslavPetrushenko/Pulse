@@ -1,124 +1,71 @@
-// search.js
-// Поиск по пользователям и сообщениям
+const Search = (() => {
+  const selectors = {
+    input: "#search-input",
+    results: "#search-results",
+  };
 
-import { apiFindUser, apiSearchMessages } from "./api.js";
-import { state } from "./state.js";
-import { saveSearchHistory } from "./storage.js";
-import { openChatWithUser } from "./chats.js";
+  let lastQuery = "";
+  let timer = null;
 
-let searchInput;
-let searchResults;
+  function setup() {
+    const input = document.querySelector(selectors.input);
+    if (!input) return;
 
-export function initSearch() {
-  searchInput = document.getElementById("searchInput");
-  searchResults = document.getElementById("searchResults");
+    input.addEventListener("input", () => {
+      const q = input.value.trim();
+      lastQuery = q;
 
-  if (!searchInput || !searchResults) return;
-
-  searchInput.oninput = onSearch;
-
-  if (state.searchHistory && state.searchHistory.length) {
-    renderHistory();
-  }
-}
-
-async function onSearch() {
-  const q = searchInput.value.trim();
-  if (!q) {
-    renderHistory();
-    return;
-  }
-
-  try {
-    const [users, messages] = await Promise.all([
-      apiFindUser(q),
-      apiSearchMessages(state.user.id, q)
-    ]);
-
-    updateHistory(q);
-    renderResults(users, messages);
-  } catch (e) {
-    console.error("Ошибка поиска:", e);
-  }
-}
-
-function updateHistory(q) {
-  if (!q) return;
-  const arr = (state.searchHistory || []).filter(x => x !== q);
-  arr.push(q);
-  const last5 = arr.slice(-5);
-  state.searchHistory = last5;
-  saveSearchHistory(last5);
-}
-
-function renderHistory() {
-  if (!searchResults) return;
-
-  searchResults.innerHTML = `
-    <div class="search-section-title">История</div>
-    ${(state.searchHistory || [])
-      .map(
-        q => `
-      <div class="search-item">
-        <div class="search-item-main">${q}</div>
-      </div>`
-      )
-      .join("")}
-  `;
-}
-
-function renderResults(users, messages) {
-  if (!searchResults) return;
-
-  searchResults.innerHTML = "";
-
-  if (users && users.length) {
-    const title = document.createElement("div");
-    title.className = "search-section-title";
-    title.textContent = "Пользователи";
-    searchResults.appendChild(title);
-
-    for (const u of users) {
-      const el = document.createElement("div");
-      el.className = "search-item";
-      el.innerHTML = `
-        <div class="search-item-avatar">${(u.name || u.username || "?")[0]}</div>
-        <div class="search-item-main">
-          <div class="search-item-name">${u.name || ""}</div>
-          <div class="search-item-username">@${u.username}</div>
-        </div>
-      `;
-
-      el.onclick = () => {
-        if (u.id) {
-          openChatWithUser(u.id);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!q) {
+          renderResults([]);
+          return;
         }
-      };
+        doSearch(q);
+      }, 300);
+    });
+  }
 
-      searchResults.appendChild(el);
+  async function doSearch(q) {
+    try {
+      const { users } = await API.searchUsers(q);
+      if (q !== lastQuery) return;
+      renderResults(users);
+    } catch {
+      // тихо
     }
   }
 
-  if (messages && messages.length) {
-    const title = document.createElement("div");
-    title.className = "search-section-title";
-    title.textContent = "Сообщения";
-    searchResults.appendChild(title);
+  function renderResults(users) {
+    const container = document.querySelector(selectors.results);
+    if (!container) return;
 
-    for (const m of messages) {
-      const el = document.createElement("div");
-      el.className = "search-item";
-      el.innerHTML = `
-        <div class="search-item-main">
-          <div class="search-item-name">${m.peerName}</div>
-          <div class="search-item-snippet">${m.snippet}</div>
-        </div>
-      `;
-      searchResults.appendChild(el);
-    }
+    container.innerHTML = "";
+    if (!users || !users.length) return;
+
+    users.forEach((u) => {
+      const item = document.createElement("div");
+      item.className = "search-item";
+      item.textContent = `${u.name} (@${u.username})`;
+
+      item.addEventListener("click", async () => {
+        try {
+          const { chatId } = await API.createDirectChat(u.id);
+          await Chats.loadChats();
+          State.setCurrentChatId(chatId);
+          UI.highlightChat(chatId);
+          await Messages.loadMessages(chatId);
+          WS.subscribeChat(chatId);
+        } catch {
+          UI.showError("Не удалось открыть диалог");
+        }
+      });
+
+      container.appendChild(item);
+    });
   }
 
-  if ((!users || !users.length) && (!messages || !messages.length)) {
-    searchResults.innerHTML = `<div class="search-item">Ничего не найдено</div>`;
-  }
-}
+  return {
+    setup,
+  };
+})();
