@@ -414,42 +414,48 @@
 
     // Экран: ввод номера
     function initPhoneScreen() {
-        const countryBtn = document.getElementById('countryBtn');
-        const phoneInput = document.getElementById('phoneInput');
-        const nextBtn = document.getElementById('phoneNextBtn');
+    const countryBtn = document.getElementById('countryBtn');
+    const phoneInput = document.getElementById('phoneInput');
+    const nextBtn = document.getElementById('phoneNextBtn');
 
-        let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
+    let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
 
-        countryBtn.onclick = () => {
-            openCountryPickerOverlay(c => {
-                currentCountry = c;
-                countryBtn.querySelector('.flag').textContent = c.flag;
-                countryBtn.querySelector('.code').textContent = c.code;
-                if (window.applyPhoneMask) {
-                    applyPhoneMask(phoneInput, c.code);
-                }
-            });
-        };
+    // Открытие выбора страны
+    countryBtn.onclick = () => {
+        openCountryPickerOverlay(c => {
+            currentCountry = c;
+            countryBtn.querySelector('.flag').textContent = c.flag;
+            countryBtn.querySelector('.code').textContent = c.code;
 
-        if (window.applyPhoneMask) {
-            applyPhoneMask(phoneInput, currentCountry.code);
+            // Маска — только локальная часть, код страны НЕ учитываем
+            applyPhoneMask(phoneInput);
+        });
+    };
+
+    // Маска при загрузке
+    applyPhoneMask(phoneInput);
+
+    // Ограничение кнопки — только если ровно 8 цифр
+    phoneInput.addEventListener('input', () => {
+        const digits = phoneInput.value.replace(/\D/g, '');
+        nextBtn.disabled = digits.length !== 8;
+    });
+
+    // Переход дальше
+    nextBtn.onclick = () => {
+        const raw = phoneInput.value.trim();
+        if (raw.length !== 8) return;
+
+        const phone = raw;
+
+        if (window.State) {
+            State.set('phone', { phone, country: currentCountry });
         }
 
-        phoneInput.addEventListener('input', () => {
-            const digits = phoneInput.value.replace(/\D/g, '');
-            nextBtn.disabled = digits.length < 5;
-        });
+        Screens.show('screen-username', { phone, country: currentCountry });
+    };
+}
 
-        nextBtn.onclick = () => {
-            const raw = phoneInput.value.trim();
-            if (!raw) return;
-            const phone = raw;
-            if (window.State) {
-                State.set('phone', { phone, country: currentCountry });
-            }
-            Screens.show('screen-username', { phone, country: currentCountry });
-        };
-    }
 
     // Экран: выбор юзернейма
     function initUsernameScreen(options) {
