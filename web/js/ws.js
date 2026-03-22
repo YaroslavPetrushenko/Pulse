@@ -1,57 +1,72 @@
-import { CONFIG, state } from "./state.js";
-import { appendMessage } from "./messages.js";
+// ws.js
+// WebSocket соединение
 
-export function connectWs() {
-  if (!state.currentUser) return;
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) return;
+import { state, appendMessage } from "./state.js";
+import { addMessageToStorage, upsertChatInStorage } from "./storage.js";
+import { renderMessages, renderChats } from "./ui.js";
 
-  const url = CONFIG.WS_URL + "/?userId=" + state.currentUser.id;
-  const ws = new WebSocket(url);
-  state.ws = ws;
+let reconnectTimer = null;
 
-  ws.onopen = () => {
+export function initWS() {
+  if (!state.user) return;
+
+  const url = `${location.origin.replace("http", "ws")}/ws?userId=${state.user.id}`;
+  state.ws = new WebSocket(url);
+
+  state.ws.onopen = () => {
+    state.wsConnected = true;
     console.log("WS connected");
   };
 
-  ws.onclose = () => {
-    console.log("WS closed, retry...");
-    state.ws = null;
-    setTimeout(() => {
-      if (state.currentUser) connectWs();
-    }, 2000);
+  state.ws.onclose = () => {
+    state.wsConnected = false;
+    console.log("WS closed, reconnecting...");
+    reconnect();
   };
 
-  ws.onmessage = (ev) => {
+  state.ws.onerror = () => {
+    console.log("WS error");
+  };
+
+  state.ws.onmessage = e => {
     try {
-      const data = JSON.parse(ev.data);
+      const data = JSON.parse(e.data);
+
       if (data.type === "message") {
-        const m = data.message;
-        if (!state.currentChat || m.chat_id !== state.currentChat.id) return;
-        appendMessage({
-          fromMe: m.sender_id === state.currentUser.id,
-          text: m.text
-        });
+        const msg = data.message;
+        appendMessage(msg.chat_id, msg);
+        addMessageToStorage(msg.chat_id, msg);
+
+        renderMessages();
+        renderChats();
       }
     } catch (e) {
-      console.error("WS parse error", e);
+      console.error("WS parse error:", e);
     }
   };
 }
 
-export function sendWsMessage(toUserId, text) {
-  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+function reconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    initWS();
+  }, 2000);
+}
+
+export function wsSendMessage(chatId, text) {
+  if (!state.wsConnected) return;
+
   state.ws.send(
     JSON.stringify({
       type: "send",
-      to: toUserId,
+      to: getPeerId(chatId),
       text
     })
   );
 }
 
-export function closeWs() {
-  if (state.ws) {
-    state.ws.close();
-    state.ws = null;
-  }
+function getPeerId(chatId) {
+  const chat = state.chats.find(c => c.id === chatId);
+  return chat?.peerId;
 }

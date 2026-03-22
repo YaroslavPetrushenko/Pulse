@@ -1,20 +1,49 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
-  <meta charset="UTF-8">
-  <title>Messenger</title>
+  <meta charset="UTF-8" />
+  <title>Pulse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
     :root {
-      --bg: #111;
-      --panel: #181818;
-      --panel-light: #202020;
-      --accent: #1e88e5;
-      --accent-soft: #1565c0;
-      --border: #333;
-      --text: #eee;
-      --text-soft: #aaa;
-      --dev: #ffb300;
+      --bg: #ffffff;
+      --bg-alt: #f5f5f5;
+      --bg-elevated: #f5f5f5;
+      --text-main: #111111;
+      --text-secondary: #6c6c70;
+      --accent: #ff3b30;
+      --divider: #e5e5ea;
+      --card: #f5f5f5;
+      --nav-bg: #ffffff;
+      --dev-username: #ff9f0a;
+      --natasha-username: #ff69b4;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --bg-alt: #000000;
+        --bg-elevated: #1f1f1f;
+        --text-main: #e0e0e0;
+        --text-secondary: #8e8e93;
+        --accent: #ff453a;
+        --divider: #2c2c2e;
+        --card: #1f1f1f;
+        --nav-bg: #000000;
+      }
+    }
+
+    body.theme-dark {
+      --bg: #000000;
+      --bg-alt: #000000;
+      --bg-elevated: #1f1f1f;
+      --text-main: #e0e0e0;
+      --text-secondary: #8e8e93;
+      --accent: #ff453a;
+      --divider: #2c2c2e;
+      --card: #1f1f1f;
+      --nav-bg: #000000;
     }
 
     * {
@@ -23,296 +52,432 @@
 
     body {
       margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
+        sans-serif;
       background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text-main);
       height: 100vh;
       overflow: hidden;
     }
 
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      color: var(--text-main);
+    }
+
     .screen {
       display: none;
-      height: 100vh;
-      width: 100vw;
+      flex: 1;
+      flex-direction: column;
+      background: var(--bg);
+      color: var(--text-main);
     }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* ---------- ЛОГО / ОБЩИЕ ---------- */
 
     .centered {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 16px;
+      padding: 24px;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      position: relative;
+    }
+
+    .logo-line {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      top: 50%;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .logo-line::before,
+    .logo-line::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      border-color: var(--accent) transparent transparent transparent;
+      transform: rotate(-20deg);
+      top: -9px;
+    }
+
+    .logo-line::before {
+      left: 8px;
+    }
+
+    .logo-line::after {
+      left: 26px;
     }
 
     h1,
     h2,
     h3 {
-      margin: 0 0 8px;
-      font-weight: 500;
+      margin: 0;
+      font-weight: 600;
     }
 
-    input,
-    select,
-    button {
-      padding: 10px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: #000;
-      color: var(--text);
+    .title-main {
+      font-size: 20px;
+    }
+
+    .subtitle {
       font-size: 14px;
-      outline: none;
-    }
-
-    input:focus,
-    select:focus {
-      border-color: var(--accent);
-    }
-
-    button {
-      background: var(--accent);
-      border: none;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    button:hover {
-      background: var(--accent-soft);
-    }
-
-    .field-label {
-      font-size: 13px;
-      color: var(--text-soft);
-      margin-bottom: 4px;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      width: 280px;
-    }
-
-    .phone-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #000;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      padding: 0 10px;
-    }
-
-    .phone-code {
-      color: var(--text-soft);
-      white-space: nowrap;
-      font-size: 14px;
-    }
-
-    .phone-input {
-      border: none;
-      background: transparent;
-      color: var(--text);
-      padding: 10px 0;
-      flex: 1;
-      outline: none;
-      font-size: 14px;
+      color: var(--text-secondary);
     }
 
     .hint {
       font-size: 12px;
-      color: var(--text-soft);
-      max-width: 280px;
-      text-align: center;
+      color: var(--text-secondary);
+      max-width: 320px;
     }
 
-    .link {
-      color: var(--accent);
-      cursor: pointer;
-      font-size: 13px;
+    /* ---------- ПОЛЯ / КНОПКИ ---------- */
+
+    .field-group {
+      width: 100%;
+      max-width: 320px;
+      text-align: left;
     }
 
-    .link:hover {
-      text-decoration: underline;
+    .field-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
     }
 
-    #screen-main {
+    .phone-field {
       display: flex;
-      height: 100vh;
-      width: 100vw;
-    }
-
-    .sidebar {
-      width: 320px;
-      background: var(--panel);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .sidebar-header {
+      align-items: center;
+      background: var(--bg-elevated);
+      border-radius: 14px;
       padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+
+    .phone-flag {
+      font-size: 18px;
+    }
+
+    .phone-input {
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 16px;
+      flex: 1;
+    }
+
+    .text-input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      font-size: 14px;
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      max-width: 320px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      border: none;
+      outline: none;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 0.1s ease;
+    }
+
+    .btn-primary:active {
+      filter: brightness(0.9);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      max-width: 320px;
+      padding: 10px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--divider);
+      outline: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* ---------- TOP BAR / NAV ---------- */
+
+    .top-bar {
+      height: 56px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--divider);
+      background: var(--bg);
     }
 
-    .sidebar-title {
-      font-size: 16px;
-      font-weight: 500;
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .sidebar-user {
-      font-size: 12px;
-      color: var(--text-soft);
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text-main);
     }
 
-    .sidebar-user-dev {
-      color: var(--dev);
-      font-weight: 500;
+    .top-title {
+      font-size: 20px;
+      font-weight: 700;
     }
 
-    .search-box {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--border);
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 20px;
+      color: var(--text-secondary);
     }
 
-    .search-input {
-      width: 100%;
-      padding: 8px 10px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: #000;
-      color: var(--text);
-      font-size: 13px;
-      outline: none;
+    .icon-btn {
+      cursor: pointer;
+      transition: color 0.1s ease;
     }
+
+    .icon-btn:active {
+      color: var(--accent);
+    }
+
+    .bottom-nav {
+      height: 56px;
+      border-top: 1px solid var(--divider);
+      background: var(--nav-bg);
+      display: flex;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .nav-icon {
+      font-size: 22px;
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+    }
+
+    /* ---------- СПИСОК ЧАТОВ ---------- */
 
     .chat-list {
       flex: 1;
       overflow-y: auto;
-      padding: 6px 0;
-      color: var(--text-soft);
-      font-size: 14px;
+      padding: 8px 12px 72px;
+      background: var(--bg);
     }
 
-    .section-label {
-      padding: 4px 10px;
-      font-size: 11px;
-      text-transform: uppercase;
-      color: var(--text-soft);
-    }
-
-    .chat-item {
-      padding: 8px 10px;
+    .chat-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 10px 12px;
       display: flex;
-      gap: 8px;
-      cursor: pointer;
       align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
     }
 
-    .chat-item:hover {
-      background: var(--panel-light);
-    }
-
-    .avatar {
-      width: 36px;
-      height: 36px;
+    .chat-avatar {
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      background: #333;
+      background: var(--bg-elevated);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 20px;
+      position: relative;
     }
 
-    .chat-meta {
+    .natasha-dot {
+      position: absolute;
+      right: 2px;
+      bottom: 2px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--natasha-username);
+    }
+
+    .chat-main {
       flex: 1;
       min-width: 0;
     }
 
-    .chat-top {
+    .chat-row-top {
       display: flex;
       justify-content: space-between;
-      font-size: 13px;
+      align-items: center;
       margin-bottom: 2px;
     }
 
     .chat-name {
-      font-weight: 500;
-    }
-
-    .chat-name-dev {
-      color: #ff8c00;
+      font-size: 16px;
       font-weight: 600;
-    }
-
-    .chat-name-natasha {
-      color: #ff4fa3;
-      font-weight: 600;
-    }
-
-    .chat-name-normal {
-      color: var(--text-soft);
-    }
-
-    .chat-time {
-      color: var(--text-soft);
-      font-size: 11px;
-    }
-
-    .chat-bottom {
-      font-size: 12px;
-      color: var(--text-soft);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .main-panel {
+    .chat-name-dev {
+      color: var(--dev-username);
+    }
+
+    .chat-name-natasha {
+      color: var(--natasha-username);
+    }
+
+    .chat-last {
+      font-size: 14px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-meta {
+      text-align: right;
+      min-width: 52px;
+      margin-left: 6px;
+    }
+
+    .chat-time {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .chat-unread {
+      min-width: 20px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .empty-state {
       flex: 1;
-      background: #101010;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: var(--text-secondary);
+      gap: 8px;
+    }
+
+    /* ---------- ЧАТ ---------- */
+
+    .chat-header {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--divider);
+      background: var(--bg);
+      gap: 10px;
+    }
+
+    .chat-back {
+      font-size: 20px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .chat-back:active {
+      color: var(--accent);
+    }
+
+    .chat-header-main {
+      flex: 1;
       display: flex;
       flex-direction: column;
     }
 
-    .main-header {
-      height: 52px;
-      border-bottom: 1px solid var(--border);
-      padding: 8px 12px;
+    .chat-header-name {
+      font-size: 16px;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 4px;
     }
 
-    .main-header-title {
-      font-size: 15px;
-      font-weight: 500;
-    }
-
-    .main-header-title-dev {
-      color: var(--dev);
-    }
-
-    .main-header-sub {
+    .chat-header-heart {
       font-size: 12px;
-      color: var(--text-soft);
+      color: var(--natasha-username);
     }
 
-    .main-empty {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-soft);
-      font-size: 14px;
+    .chat-header-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .chat-header-menu {
+      font-size: 20px;
+      color: var(--text-secondary);
+      cursor: pointer;
     }
 
     .messages {
       flex: 1;
-      padding: 10px 12px;
       overflow-y: auto;
-      display: none;
+      padding: 8px 10px;
+      background: var(--bg);
     }
 
     .msg-row {
@@ -324,239 +489,515 @@
       justify-content: flex-end;
     }
 
+    .msg-row.other {
+      justify-content: flex-start;
+    }
+
     .msg-bubble {
-      max-width: 60%;
-      padding: 6px 10px;
-      border-radius: 12px;
-      font-size: 13px;
+      max-width: 80%;
+      padding: 8px 10px;
+      border-radius: 18px;
+      font-size: 14px;
       line-height: 1.3;
+      position: relative;
     }
 
     .msg-row.me .msg-bubble {
       background: var(--accent);
+      color: #ffffff;
+      border-bottom-right-radius: 6px;
     }
 
     .msg-row.other .msg-bubble {
-      background: var(--panel-light);
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border-bottom-left-radius: 6px;
     }
 
-    .composer {
-      border-top: 1px solid var(--border);
-      padding: 8px 10px;
+    .msg-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
       display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .msg-meta.me {
+      justify-content: flex-end;
+    }
+
+    .msg-meta.other {
+      justify-content: flex-start;
+    }
+
+    .msg-checks {
+      font-size: 12px;
+    }
+
+    .msg-checks.read {
+      color: var(--accent);
+    }
+
+    .chat-input-bar {
+      padding: 6px 8px;
+      border-top: 1px solid var(--divider);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
       gap: 8px;
+    }
+
+    .chat-input-plus,
+    .chat-input-mic {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .chat-input-plus:active,
+    .chat-input-mic:active {
+      color: var(--accent);
+    }
+
+    .chat-input-field-wrap {
+      flex: 1;
+      background: var(--bg-elevated);
+      border-radius: 20px;
+      padding: 6px 10px;
+      display: flex;
       align-items: center;
     }
 
-    .composer-input {
-      flex: 1;
-      padding: 8px 10px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: #000;
-      color: var(--text);
-      font-size: 13px;
-      outline: none;
-    }
-
-    .composer-btn {
-      padding: 8px 14px;
-      border-radius: 16px;
+    .chat-input-field {
       border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .chat-input-send {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
       background: var(--accent);
-      color: #fff;
-      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 16px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
+    .chat-input-send.hidden {
+      display: none;
+    }
+
+    /* ---------- ПРОФИЛЬ ---------- */
+
+    .profile-header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--divider);
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .profile-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .profile-avatar {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+
+    .profile-name {
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .profile-username {
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+
+    .profile-username.dev {
+      color: var(--dev-username);
+    }
+
+    .profile-username.natasha {
+      color: var(--natasha-username);
+    }
+
+    .profile-stats {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .profile-btn {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: none;
+      text-align: left;
+      font-size: 14px;
+      margin-bottom: 8px;
       cursor: pointer;
     }
 
-    .composer-btn:hover {
-      background: var(--accent-soft);
+    .profile-btn.logout {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      text-align: center;
+      margin-top: 12px;
     }
 
-    .back-link {
+    /* ---------- ПОИСК ---------- */
+
+    .search-header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--divider);
+      gap: 8px;
+    }
+
+    .search-input-wrap {
+      flex: 1;
+      background: var(--bg-elevated);
+      border-radius: 16px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .search-input {
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .search-results {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px 72px;
+    }
+
+    .search-section-title {
       font-size: 12px;
-      color: var(--text-soft);
-      cursor: pointer;
-      margin-top: 4px;
+      color: var(--text-secondary);
+      margin: 8px 0 4px;
     }
 
-    .back-link:hover {
-      text-decoration: underline;
+    .search-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .username-status-error {
-      color: #f44336;
+    .search-item-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
     }
 
-    .username-status-ok {
-      color: #4caf50;
+    .search-item-main {
+      flex: 1;
+      min-width: 0;
     }
 
-    .username-status-dev {
-      color: var(--dev);
+    .search-item-name {
+      font-size: 14px;
       font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* ===== MOBILE ADAPTATION ===== */
-    @media (max-width: 768px) {
+    .search-item-username {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
 
-      #mobileHeader {
-        display: flex !important;
-      }
+    .search-item-username.dev {
+      color: var(--dev-username);
+    }
 
-      #sidebar {
-        width: 100% !important;
-        border-right: none !important;
-      }
+    .search-item-username.natasha {
+      color: var(--natasha-username);
+    }
 
-      #screen-main {
-        flex-direction: column;
-      }
+    .search-item-snippet {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-      .sidebar {
-        width: 100% !important;
-      }
+    /* ---------- НАСТРОЙКИ ---------- */
 
-      .main-panel {
-        display: none;
-        width: 100%;
-      }
+    .settings-header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--divider);
+      font-size: 18px;
+      font-weight: 600;
+    }
 
-      #backBtnMobile {
-        display: block !important;
-      }
+    .settings-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      font-size: 14px;
+    }
+
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .settings-label {
+      font-size: 14px;
+    }
+
+    .settings-switch {
+      width: 40px;
+      height: 24px;
+      border-radius: 12px;
+      background: var(--bg-elevated);
+      position: relative;
+      cursor: pointer;
+    }
+
+    .settings-switch-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      transition: transform 0.15s ease;
+    }
+
+    .settings-switch.on {
+      background: var(--accent);
+    }
+
+    .settings-switch.on .settings-switch-thumb {
+      transform: translateX(16px);
+    }
+
+    .settings-text-block {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      line-height: 1.4;
     }
   </style>
 </head>
-
 <body>
+  <div class="app">
 
-  <!-- MOBILE HEADER -->
-  <div id="mobileHeader" style="
-    display:none;
-    align-items:center;
-    padding:10px 14px;
-    background:#1f1f1f;
-    height:56px;
-    border-bottom:1px solid #2a2a2a;
-  ">
-    <div style="font-size:20px;font-weight:600;">Pulse</div>
-  </div>
-
-  <!-- MOBILE SEARCH (пока скрыт) -->
-  <div id="mobileSearch" style="display:none;padding:10px;background:#1f1f1f;border-bottom:1px solid #2a2a2a;">
-    <input id="mobileSearchInput" placeholder="Поиск" style="
-      width:100%;
-      padding:10px 14px;
-      border-radius:10px;
-      border:none;
-      background:#2a2a2a;
-      color:white;
-      font-size:16px;
-    ">
-  </div>
-
-  <!-- ЭКРАН 1: ТЕЛЕФОН -->
-  <div id="screen-phone" class="screen centered">
-    <h2>Вход по номеру телефона</h2>
-
-    <div class="field-group">
-      <div class="field-label">Страна</div>
-      <select id="countrySelect">
-        <option value="ru" data-code="+7">🇷🇺 Россия (+7)</option>
-        <option value="de" data-code="+49">🇩🇪 Германия (+49)</option>
-        <option value="ua" data-code="+380">🇺🇦 Украина (+380)</option>
-        <option value="kz" data-code="+7">🇰🇿 Казахстан (+7)</option>
-        <option value="us" data-code="+1">🇺🇸 США (+1)</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <div class="field-label">Телефон</div>
-      <div class="phone-wrapper">
-        <span id="phoneCode" class="phone-code">+7</span>
-        <input id="phoneLocal" class="phone-input" placeholder="900 000-00-00">
-      </div>
-    </div>
-
-    <button id="btnPhoneNext" style="width:280px;">Далее</button>
-    <div class="hint">Мы используем номер телефона для входа или регистрации.</div>
-  </div>
-
-  <!-- ЭКРАН 2: ЛОГИН / РЕГИСТРАЦИЯ -->
-  <div id="screen-auth" class="screen centered">
-    <h2 id="authTitle">Вход</h2>
-    <div id="authPhoneText" class="hint"></div>
-
-    <div id="authExisting" style="display:none; flex-direction:column; gap:12px; align-items:center;">
-      <div class="field-group">
-        <div class="field-label">Пароль</div>
-        <input id="authPassword" type="password" placeholder="Пароль">
-      </div>
-      <button id="btnLogin" style="width:280px;">Войти</button>
-      <div class="back-link" id="backToPhone1">Изменить номер</div>
-    </div>
-
-    <div id="authNew" style="display:none; flex-direction:column; gap:12px; align-items:center;">
-      <div class="field-group">
-        <div class="field-label">Имя</div>
-        <input id="regName" placeholder="Как вас называть">
-      </div>
-      <div class="field-group">
-        <div class="field-label">Имя пользователя (@username)</div>
-        <input id="regUsername" placeholder="например: yaroslav">
-        <div id="usernameStatus" style="font-size:12px; margin-top:2px;"></div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Пароль</div>
-        <input id="regPassword" type="password" placeholder="Придумайте пароль">
-      </div>
-      <button id="btnRegister" style="width:280px;">Зарегистрироваться</button>
-      <div class="back-link" id="backToPhone2">Изменить номер</div>
-    </div>
-  </div>
-
-  <!-- ЭКРАН 3: ОСНОВНОЙ -->
-  <div id="screen-main" class="screen">
-    <div class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div>
-          <div class="sidebar-title">Messenger</div>
-          <div class="sidebar-user" id="sidebarUser"></div>
+    <!-- ЭКРАН ВХОДА / РЕГИСТРАЦИИ -->
+    <div id="screen-auth" class="screen active">
+      <div class="centered">
+        <div class="logo">
+          <div class="logo-line"></div>
         </div>
-        <div class="link" id="logoutLink">Выйти</div>
+        <h2 class="title-main">Pulse</h2>
+        <div class="subtitle">Вход или регистрация по номеру телефона</div>
+
+        <div class="field-group">
+          <div class="field-label">Номер телефона</div>
+          <div class="phone-field">
+            <div class="phone-flag" id="phoneFlag">🇷🇺</div>
+            <input id="phoneInput" class="phone-input" placeholder="+7 900 000-00-00" />
+          </div>
+        </div>
+
+        <button id="btnAuthNext" class="btn-primary">Далее</button>
+        <div class="hint">
+          Мы используем номер телефона для входа или регистрации. Данные не продаются.
+        </div>
       </div>
-      <div class="search-box">
-        <input id="searchInput" class="search-input" placeholder="Поиск (@user, имя, текст)">
+    </div>
+
+    <!-- ГЛАВНЫЙ ЭКРАН: СПИСОК ЧАТОВ -->
+    <div id="screen-chats" class="screen">
+      <div class="top-bar">
+        <div class="top-left">
+          <div id="userAvatar" class="avatar"></div>
+          <div class="top-title">Pulse</div>
+        </div>
+        <div class="top-actions">
+          <div id="btnOpenSearch" class="icon-btn">🔍</div>
+          <div id="btnOpenSettings" class="icon-btn">⋯</div>
+        </div>
       </div>
+
       <div id="chatList" class="chat-list">
-        У вас пока нет чатов
+        <!-- Чаты рендерит JS -->
       </div>
-    </div>
 
-    <div class="main-panel">
-      <div class="main-header">
-        <div>
-          <div class="main-header-title" id="chatTitle">Нет чата</div>
-          <div class="main-header-sub" id="chatSub">Выберите контакт, чтобы начать общение</div>
+      <div class="bottom-nav">
+        <div id="navChats" class="nav-item active">
+          <div class="nav-icon">💬</div>
+          <div>Чаты</div>
+        </div>
+        <div id="navSearch" class="nav-item">
+          <div class="nav-icon">🔍</div>
+          <div>Поиск</div>
+        </div>
+        <div id="navChannels" class="nav-item">
+          <div class="nav-icon">📡</div>
+          <div>Каналы</div>
+        </div>
+        <div id="navProfile" class="nav-item">
+          <div class="nav-icon">👤</div>
+          <div>Профиль</div>
         </div>
       </div>
-      <div id="mainEmpty" class="main-empty">
-        Выберите контакт, чтобы начать общение
+    </div>
+
+    <!-- ЭКРАН ЧАТА -->
+    <div id="screen-chat" class="screen">
+      <div class="chat-header">
+        <div id="chatBack" class="chat-back">←</div>
+        <div class="chat-header-main">
+          <div class="chat-header-name">
+            <span id="chatTitle"></span>
+            <span id="chatHeart" class="chat-header-heart" style="display:none;">❤</span>
+          </div>
+          <div id="chatSubtitle" class="chat-header-sub"></div>
+        </div>
+        <div id="chatMenu" class="chat-header-menu">⋯</div>
       </div>
-      <div id="messages" class="messages"></div>
-      <div class="composer">
-        <input id="msgInput" class="composer-input" placeholder="Сообщение..." disabled>
-        <button id="msgSend" class="composer-btn" disabled>Отправить</button>
+
+      <div id="messagesList" class="messages">
+        <!-- Сообщения рендерит JS -->
+      </div>
+
+      <div class="chat-input-bar">
+        <div id="attachBtn" class="chat-input-plus">＋</div>
+        <div class="chat-input-field-wrap">
+          <input id="msgInput" class="chat-input-field" placeholder="Сообщение..." />
+          <div id="msgSendBtn" class="chat-input-send hidden">➤</div>
+        </div>
+        <div id="voiceBtn" class="chat-input-mic">🎤</div>
       </div>
     </div>
+
+    <!-- ЭКРАН ПРОФИЛЯ -->
+    <div id="screen-profile" class="screen">
+      <div class="profile-header">Профиль</div>
+      <div class="profile-content">
+        <div id="profileAvatar" class="profile-avatar"></div>
+        <div id="profileName" class="profile-name"></div>
+        <div id="profileUsername" class="profile-username"></div>
+        <div id="profileStats" class="profile-stats"></div>
+
+        <button id="btnEditProfile" class="profile-btn">Редактировать профиль</button>
+        <button id="btnProfileSettings" class="profile-btn">Настройки</button>
+        <button id="btnPrivacy" class="profile-btn">Политика конфиденциальности</button>
+
+        <button id="btnLogout" class="profile-btn logout">Выйти из аккаунта</button>
+      </div>
+    </div>
+
+    <!-- ЭКРАН ПОИСКА -->
+    <div id="screen-search" class="screen">
+      <div class="search-header">
+        <div id="searchBack" class="icon-btn">←</div>
+        <div class="search-input-wrap">
+          <input id="searchInput" class="search-input" placeholder="Поиск по сообщениям или пользователям" />
+        </div>
+      </div>
+      <div id="searchResults" class="search-results">
+        <!-- Результаты и история рендерит JS -->
+      </div>
+    </div>
+
+    <!-- ЭКРАН НАСТРОЕК -->
+    <div id="screen-settings" class="screen">
+      <div class="settings-header">Настройки</div>
+      <div class="settings-content">
+        <div class="settings-item">
+          <div class="settings-label">Тёмная тема</div>
+          <div id="darkThemeSwitch" class="settings-switch">
+            <div class="settings-switch-thumb"></div>
+          </div>
+        </div>
+
+        <div class="settings-item">
+          <div class="settings-label">Уведомления</div>
+          <div id="notificationsSwitch" class="settings-switch">
+            <div class="settings-switch-thumb"></div>
+          </div>
+        </div>
+
+        <div class="settings-item">
+          <div class="settings-label">Безопасность: активные сессии</div>
+        </div>
+
+        <div class="settings-text-block">
+          Политика конфиденциальности: здесь будет нормальный, читабельный текст без микрошрифта.
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script type="module">
-    import { bootstrap } from "./js/bootstrap.js";
-    bootstrap();
-  </script>
-
+  <!-- Подключение модулей фронта -->
+  <script type="module" src="js/bootstrap.js"></script>
 </body>
-
 </html>

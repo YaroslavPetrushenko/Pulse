@@ -1,7 +1,5 @@
-const path = require("path");
+// config.js
 
-module.exports = {
-  PORT: process.env.PORT || 3000,
-  DB_FILE: path.join(__dirname, "..", "cloud.db"),
-  STATIC_DIR: path.join(__dirname, "..", "web")
-};
+export const PORT = process.env.PORT || 3000;
+export const DB_PATH = process.env.DB_PATH || "cloud.db";
+export const WS_PATH = "/ws";

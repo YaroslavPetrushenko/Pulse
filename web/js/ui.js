@@ -1,157 +1,181 @@
-import { DEV_PHONE, DEV_USERNAME, state } from "./state.js";
+// ui.js
+// Управление экранами, рендер списков, рендер сообщений, мобильная логика
 
-export const dom = {
-  screens: {},
-  countrySelect: null,
-  phoneCodeSpan: null,
-  phoneLocalInput: null,
-  btnPhoneNext: null,
-  authTitle: null,
-  authPhoneText: null,
-  authExisting: null,
-  authNew: null,
-  authPassword: null,
-  regName: null,
-  regUsername: null,
-  usernameStatus: null,
-  regPassword: null,
-  btnLogin: null,
-  btnRegister: null,
-  backToPhone1: null,
-  backToPhone2: null,
-  sidebarUser: null,
-  chatListEl: null,
-  chatTitle: null,
-  chatSub: null,
-  mainEmpty: null,
-  messagesEl: null,
-  msgInput: null,
-  msgSend: null,
-  logoutLink: null,
-  searchInput: null
+import { state, getMessagesForChat, getCurrentChat } from "./state.js";
+import { saveTheme } from "./storage.js";
+
+// ---------- ЭКРАНЫ ----------
+
+const screens = {
+  auth: document.getElementById("screen-auth"),
+  chats: document.getElementById("screen-chats"),
+  chat: document.getElementById("screen-chat"),
+  profile: document.getElementById("screen-profile"),
+  search: document.getElementById("screen-search"),
+  settings: document.getElementById("screen-settings")
 };
 
-export function initDom() {
-  dom.screens = {
-    phone: document.getElementById("screen-phone"),
-    auth: document.getElementById("screen-auth"),
-    main: document.getElementById("screen-main")
-  };
-
-  dom.countrySelect = document.getElementById("countrySelect");
-  dom.phoneCodeSpan = document.getElementById("phoneCode");
-  dom.phoneLocalInput = document.getElementById("phoneLocal");
-  dom.btnPhoneNext = document.getElementById("btnPhoneNext");
-
-  dom.authTitle = document.getElementById("authTitle");
-  dom.authPhoneText = document.getElementById("authPhoneText");
-  dom.authExisting = document.getElementById("authExisting");
-  dom.authNew = document.getElementById("authNew");
-  dom.authPassword = document.getElementById("authPassword");
-  dom.regName = document.getElementById("regName");
-  dom.regUsername = document.getElementById("regUsername");
-  dom.usernameStatus = document.getElementById("usernameStatus");
-  dom.regPassword = document.getElementById("regPassword");
-  dom.btnLogin = document.getElementById("btnLogin");
-  dom.btnRegister = document.getElementById("btnRegister");
-  dom.backToPhone1 = document.getElementById("backToPhone1");
-  dom.backToPhone2 = document.getElementById("backToPhone2");
-
-  dom.sidebarUser = document.getElementById("sidebarUser");
-  dom.chatListEl = document.getElementById("chatList");
-  dom.chatTitle = document.getElementById("chatTitle");
-  dom.chatSub = document.getElementById("chatSub");
-  dom.mainEmpty = document.getElementById("mainEmpty");
-  dom.messagesEl = document.getElementById("messages");
-  dom.msgInput = document.getElementById("msgInput");
-  dom.msgSend = document.getElementById("msgSend");
-  dom.logoutLink = document.getElementById("logoutLink");
-  dom.searchInput = document.getElementById("searchInput");
-}
-
 export function showScreen(name) {
-  Object.values(dom.screens).forEach((s) => (s.style.display = "none"));
-  dom.screens[name].style.display = "flex";
+  Object.values(screens).forEach(s => s.classList.remove("active"));
+  screens[name].classList.add("active");
 }
 
-export function normalizePhone(code, local) {
-  return code + local.replace(/\D/g, "");
+// ---------- МОБИЛЬНОЕ ПОВЕДЕНИЕ ----------
+
+export function openChatMobile() {
+  showScreen("chat");
 }
 
-export function resetAuthFields() {
-  state.fullPhone = "";
-  dom.authPassword.value = "";
-  dom.regName.value = "";
-  dom.regUsername.value = "";
-  dom.regPassword.value = "";
-  dom.usernameStatus.textContent = "";
-  dom.usernameStatus.className = "";
+export function closeChatMobile() {
+  showScreen("chats");
 }
 
-export function updateAuthPhoneText() {
-  dom.authPhoneText.textContent = "Номер: " + state.fullPhone;
-}
+// ---------- ТЕМА ----------
 
-export function setupAuthScreen(exists) {
-  updateAuthPhoneText();
-  if (exists) {
-    dom.authTitle.textContent = "Вход";
-    dom.authExisting.style.display = "flex";
-    dom.authNew.style.display = "none";
+export function applyTheme() {
+  if (state.theme === "auto") {
+    document.body.classList.remove("theme-dark");
+    return;
+  }
+  if (state.theme === "dark") {
+    document.body.classList.add("theme-dark");
   } else {
-    dom.authTitle.textContent = "Регистрация";
-    dom.authExisting.style.display = "none";
-    dom.authNew.style.display = "flex";
+    document.body.classList.remove("theme-dark");
   }
 }
 
-export function updateSidebarUser() {
-  const u = state.currentUser;
-  if (!u) {
-    dom.sidebarUser.textContent = "";
-    dom.sidebarUser.classList.remove("sidebar-user-dev");
+export function toggleTheme() {
+  if (state.theme === "auto") {
+    state.theme = "dark";
+  } else if (state.theme === "dark") {
+    state.theme = "light";
+  } else {
+    state.theme = "auto";
+  }
+  saveTheme(state.theme);
+  applyTheme();
+}
+
+// ---------- РЕНДЕР ЧАТОВ ----------
+
+const chatList = document.getElementById("chatList");
+
+export function renderChats() {
+  chatList.innerHTML = "";
+
+  if (!state.chats.length) {
+    chatList.innerHTML = `
+      <div class="empty-state">
+        <div>У вас пока нет чатов</div>
+      </div>
+    `;
     return;
   }
 
-  const uname = u.username ? "@" + u.username : "";
-  dom.sidebarUser.textContent =
-    u.name + (uname ? " · " + uname : " · " + u.phone);
+  for (const chat of state.chats) {
+    const isDev = chat.peerUsername === "@&Developer&Official&";
+    const isNatasha = chat.peerUsername?.toLowerCase().includes("natasha");
 
-  if (u.isDeveloper || u.username === DEV_USERNAME || u.phone === DEV_PHONE) {
-    dom.sidebarUser.classList.add("sidebar-user-dev");
-    dom.sidebarUser.textContent += " · DEV";
-  } else {
-    dom.sidebarUser.classList.remove("sidebar-user-dev");
+    const card = document.createElement("div");
+    card.className = "chat-card";
+    card.dataset.chatId = chat.id;
+
+    card.innerHTML = `
+      <div class="chat-avatar">
+        ${chat.name[0] || "?"}
+        ${isNatasha ? `<div class="natasha-dot"></div>` : ""}
+      </div>
+
+      <div class="chat-main">
+        <div class="chat-row-top">
+          <div class="chat-name ${isDev ? "chat-name-dev" : ""} ${isNatasha ? "chat-name-natasha" : ""}">
+            ${chat.name}
+          </div>
+          <div class="chat-meta">
+            <div class="chat-time">${chat.lastTime || ""}</div>
+            ${chat.unread ? `<div class="chat-unread">${chat.unread}</div>` : ""}
+          </div>
+        </div>
+        <div class="chat-last">${chat.lastMessage || ""}</div>
+      </div>
+    `;
+
+    card.onclick = () => {
+      openChatMobile();
+      state.currentChatId = chat.id;
+      renderChatHeader();
+      renderMessages();
+    };
+
+    chatList.appendChild(card);
   }
 }
 
-export function setChatHeader(chat) {
-  if (!chat) {
-    dom.chatTitle.textContent = "Нет чата";
-    dom.chatTitle.classList.remove("main-header-title-dev");
-    dom.chatTitle.style.color = "";
-    dom.chatSub.textContent = "Выберите контакт, чтобы начать общение";
-    dom.mainEmpty.style.display = "flex";
-    dom.messagesEl.style.display = "none";
-    dom.msgInput.disabled = true;
-    dom.msgSend.disabled = true;
-    return;
+// ---------- РЕНДЕР ШАПКИ ЧАТА ----------
+
+export function renderChatHeader() {
+  const chat = getCurrentChat();
+  if (!chat) return;
+
+  const isNatasha = chat.peerUsername?.toLowerCase().includes("natasha");
+
+  document.getElementById("chatTitle").textContent = chat.name;
+  document.getElementById("chatSubtitle").textContent = chat.peerUsername || "";
+  document.getElementById("chatHeart").style.display = isNatasha ? "inline" : "none";
+}
+
+// ---------- РЕНДЕР СООБЩЕНИЙ ----------
+
+const messagesList = document.getElementById("messagesList");
+
+export function renderMessages() {
+  const chatId = state.currentChatId;
+  if (!chatId) return;
+
+  const list = getMessagesForChat(chatId);
+  messagesList.innerHTML = "";
+
+  for (const msg of list) {
+    const isMe = msg.sender_id === state.user.id;
+
+    const row = document.createElement("div");
+    row.className = "msg-row " + (isMe ? "me" : "other");
+
+    row.innerHTML = `
+      <div class="msg-bubble">${escapeHtml(msg.text)}</div>
+    `;
+
+    const meta = document.createElement("div");
+    meta.className = "msg-meta " + (isMe ? "me" : "other");
+    meta.innerHTML = `
+      <span>${formatTime(msg.created_at)}</span>
+      ${isMe ? `<span class="msg-checks read">✔✔</span>` : ""}
+    `;
+
+    messagesList.appendChild(row);
+    messagesList.appendChild(meta);
   }
 
-  dom.chatTitle.textContent = chat.name;
-  dom.chatTitle.classList.remove("main-header-title-dev");
-  dom.chatTitle.style.color = "";
+  messagesList.scrollTop = messagesList.scrollHeight;
+}
 
-  if (chat.peerUsername === DEV_USERNAME) {
-    dom.chatTitle.style.color = "#ff8c00";
-    dom.chatTitle.classList.add("main-header-title-dev");
-  } else if (chat.peerUsername === "NatashaLove") {
-    dom.chatTitle.style.color = "#ff4fa3";
-  }
+// ---------- УТИЛИТЫ ----------
 
-  dom.chatSub.textContent = chat.peerUsername ? "@" + chat.peerUsername : "";
-  dom.mainEmpty.style.display = "none";
-  dom.messagesEl.style.display = "block";
-  dom.msgInput.disabled = false;
-  dom.msgSend.disabled = false;
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, m => {
+    return (
+      {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[m] || m
+    );
+  });
+}
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }

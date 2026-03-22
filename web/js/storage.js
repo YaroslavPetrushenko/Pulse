@@ -1,47 +1,111 @@
-import { state } from "./state.js";
+// storage.js
+// Надёжная работа с localStorage + синхронизация со state
 
-const PHONE_KEY = "phone";
-const USER_KEY = "user";
+import {
+  state,
+  resetState,
+  upsertChat,
+  appendMessage
+} from "./state.js";
 
-export function loadFromStorage() {
-  let phone = null;
-  let user = null;
+const STORAGE_VERSION = 1;
+const PREFIX = "pulse_v" + STORAGE_VERSION + "_";
 
+const KEY_USER = PREFIX + "user";
+const KEY_CHATS = PREFIX + "chats";
+const KEY_MESSAGES = PREFIX + "messages";
+const KEY_THEME = PREFIX + "theme";
+const KEY_SEARCH = PREFIX + "search_history";
+
+function safeParse(json, fallback) {
+  if (!json) return fallback;
   try {
-    phone = localStorage.getItem(PHONE_KEY) || null;
-    const raw = localStorage.getItem(USER_KEY);
-    if (raw) user = JSON.parse(raw);
-  } catch (e) {
-    phone = null;
-    user = null;
+    return JSON.parse(json);
+  } catch {
+    return fallback;
   }
-
-  if (user && (!user.id || !user.username || !user.name || !user.phone)) {
-    console.warn("Битый user в localStorage — очищаю");
-    clearStorage();
-    phone = null;
-    user = null;
-  }
-
-  if (phone) state.fullPhone = phone;
-  if (user) state.currentUser = user;
-
-  return { phone, user };
 }
 
-export function savePhone(phone) {
-  state.fullPhone = phone;
-  localStorage.setItem(PHONE_KEY, phone);
+export function loadStorage() {
+  state.isRestoring = true;
+
+  const user = safeParse(localStorage.getItem(KEY_USER), null);
+  const chats = safeParse(localStorage.getItem(KEY_CHATS), []);
+  const messages = safeParse(localStorage.getItem(KEY_MESSAGES), {});
+  const theme = localStorage.getItem(KEY_THEME) || "auto";
+  const history = safeParse(localStorage.getItem(KEY_SEARCH), []);
+
+  if (user && user.id && user.phone) {
+    state.user = user;
+  }
+
+  if (Array.isArray(chats)) {
+    state.chats = chats;
+  }
+
+  if (messages && typeof messages === "object") {
+    state.messages = messages;
+  }
+
+  if (theme === "light" || theme === "dark" || theme === "auto") {
+    state.theme = theme;
+  }
+
+  if (Array.isArray(history)) {
+    state.searchHistory = history.filter(q => typeof q === "string" && q.trim());
+  }
+
+  state.isRestoring = false;
 }
 
 export function saveUser(user) {
-  state.currentUser = user;
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (!user || !user.id) return;
+  state.user = user;
+  localStorage.setItem(KEY_USER, JSON.stringify(user));
+}
+
+export function saveChats(chats) {
+  if (!Array.isArray(chats)) return;
+  state.chats = chats;
+  localStorage.setItem(KEY_CHATS, JSON.stringify(chats));
+}
+
+export function saveMessages(chatId, list) {
+  if (!chatId) return;
+  if (!Array.isArray(list)) return;
+  state.messages[chatId] = list;
+  localStorage.setItem(KEY_MESSAGES, JSON.stringify(state.messages));
+}
+
+export function addMessageToStorage(chatId, message) {
+  appendMessage(chatId, message);
+  localStorage.setItem(KEY_MESSAGES, JSON.stringify(state.messages));
+}
+
+export function upsertChatInStorage(chat) {
+  upsertChat(chat);
+  localStorage.setItem(KEY_CHATS, JSON.stringify(state.chats));
+}
+
+export function saveTheme(theme) {
+  if (!["auto", "light", "dark"].includes(theme)) return;
+  state.theme = theme;
+  localStorage.setItem(KEY_THEME, theme);
+}
+
+export function saveSearchHistory(history) {
+  if (!Array.isArray(history)) return;
+  const cleaned = history
+    .map(q => (typeof q === "string" ? q.trim() : ""))
+    .filter(Boolean)
+    .slice(-5);
+  state.searchHistory = cleaned;
+  localStorage.setItem(KEY_SEARCH, JSON.stringify(cleaned));
 }
 
 export function clearStorage() {
-  localStorage.removeItem(PHONE_KEY);
-  localStorage.removeItem(USER_KEY);
-  state.fullPhone = "";
-  state.currentUser = null;
+  resetState();
+  Object.keys(localStorage)
+    .filter(k => k.startsWith(PREFIX))
+    .forEach(k => localStorage.removeItem(k));
 }

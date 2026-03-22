@@ -1,21 +1,19 @@
-const crypto = require("crypto");
+// utils.js
+import bcrypt from "bcryptjs";
 
-function hashPassword(pwd) {
-  return crypto.createHash("sha256").update(pwd).digest("hex");
+export function now() {
+  return Date.now();
 }
 
-function normalizeUserPublic(u) {
-  if (!u) return null;
-  return {
-    id: u.id,
-    phone: u.phone,
-    name: u.name,
-    username: u.username,
-    isDeveloper: !!u.is_developer
-  };
+export function normalizePhone(phone) {
+  return phone.replace(/[^\d+]/g, "");
 }
 
-module.exports = {
-  hashPassword,
-  normalizeUserPublic
-};
+export async function hashPassword(password) {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+}
+
+export async function comparePassword(password, hash) {
+  return bcrypt.compare(password, hash);
+}

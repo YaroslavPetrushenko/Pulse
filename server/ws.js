@@ -1,75 +1,64 @@
-const WebSocket = require("ws");
-const { db, getOrCreateChat } = require("./db");
+// ws.js
+import { WebSocketServer } from "ws";
+import { WS_PATH } from "./config.js";
+import { addMessage } from "./messages.js";
+import { getOrCreateChat } from "./chats.js";
 
-function initWs(server) {
-  const wss = new WebSocket.Server({ server });
-  const wsClients = new Map(); // userId -> ws
+const clients = new Map(); // userId -> Set(ws)
+
+export function initWs(server) {
+  const wss = new WebSocketServer({ server, path: WS_PATH });
 
   wss.on("connection", (ws, req) => {
-    const url = new URL(req.url, "http://localhost");
-    const userId = parseInt(url.searchParams.get("userId"), 10);
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const userId = url.searchParams.get("userId");
 
     if (!userId) {
       ws.close();
       return;
     }
 
-    wsClients.set(userId, ws);
+    if (!clients.has(userId)) clients.set(userId, new Set());
+    clients.get(userId).add(ws);
 
     ws.on("close", () => {
-      wsClients.delete(userId);
+      const set = clients.get(userId);
+      if (!set) return;
+      set.delete(ws);
+      if (!set.size) clients.delete(userId);
     });
 
-    ws.on("message", async (msg) => {
+    ws.on("message", async data => {
       try {
-        const data = JSON.parse(msg.toString());
-        if (data.type === "send") {
-          const fromId = userId;
-          const toId = parseInt(data.to, 10);
-          const text = (data.text || "").trim();
-          if (!toId || !text) return;
+        const msg = JSON.parse(data.toString());
+        if (msg.type === "send") {
+          const { to, text } = msg;
+          if (!to || !text) return;
 
-          const chat = await getOrCreateChat(fromId, toId);
-          const now = Date.now();
+          const chat = await getOrCreateChat(Number(userId), Number(to));
+          const saved = await addMessage(chat.id, Number(userId), text);
 
-          db.run(
-            "INSERT INTO messages (chat_id, sender_id, text, created_at) VALUES (?, ?, ?, ?)",
-            [chat.id, fromId, text, now],
-            function (err) {
-              if (err) {
-                console.error(err);
-                return;
-              }
+          const payload = JSON.stringify({
+            type: "message",
+            message: saved
+          });
 
-              const message = {
-                id: this.lastID,
-                chat_id: chat.id,
-                sender_id: fromId,
-                text,
-                created_at: now
-              };
-
-              const wsFrom = wsClients.get(fromId);
-              if (wsFrom && wsFrom.readyState === WebSocket.OPEN) {
-                wsFrom.send(JSON.stringify({ type: "message", message }));
-              }
-
-              const wsTo = wsClients.get(toId);
-              if (wsTo && wsTo.readyState === WebSocket.OPEN) {
-                wsTo.send(JSON.stringify({ type: "message", message }));
-              }
-            }
-          );
+          broadcastToUser(userId, payload);
+          broadcastToUser(String(to), payload);
         }
       } catch (e) {
-        console.error("WS message error", e);
+        console.error("WS message error:", e);
       }
     });
   });
-
-  return wss;
 }
 
-module.exports = {
-  initWs
-};
+function broadcastToUser(userId, payload) {
+  const set = clients.get(String(userId));
+  if (!set) return;
+  for (const ws of set) {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(payload);
+    }
+  }
+}

@@ -1,106 +1,72 @@
-const sqlite3 = require("sqlite3").verbose();
-const { DB_FILE } = require("./config");
+// db.js
+import sqlite3 from "sqlite3";
+import { DB_PATH } from "./config.js";
 
-const db = new sqlite3.Database(DB_FILE);
+sqlite3.verbose();
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      phone TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL,
-      username TEXT UNIQUE,
-      password_hash TEXT NOT NULL,
-      is_developer INTEGER DEFAULT 0,
-      created_at INTEGER NOT NULL
-    )
-  `);
+const db = new sqlite3.Database(DB_PATH);
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS chats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user1_id INTEGER NOT NULL,
-      user2_id INTEGER NOT NULL,
-      created_at INTEGER NOT NULL,
-      UNIQUE(user1_id, user2_id)
-    )
-  `);
+export function initDb() {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phone TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        is_developer INTEGER DEFAULT 0
+      )
+    `);
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      chat_id INTEGER NOT NULL,
-      sender_id INTEGER NOT NULL,
-      text TEXT NOT NULL,
-      created_at INTEGER NOT NULL
-    )
-  `);
-});
+    db.run(`
+      CREATE TABLE IF NOT EXISTS chats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user1_id INTEGER NOT NULL,
+        user2_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(user1_id) REFERENCES users(id),
+        FOREIGN KEY(user2_id) REFERENCES users(id)
+      )
+    `);
 
-function getUserByPhone(phone) {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id INTEGER NOT NULL,
+        sender_id INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(chat_id) REFERENCES chats(id),
+        FOREIGN KEY(sender_id) REFERENCES users(id)
+      )
+    `);
+  });
+}
+
+export function dbGet(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.get("SELECT * FROM users WHERE phone = ?", [phone], (err, row) => {
+    db.get(sql, params, (err, row) => {
       if (err) return reject(err);
       resolve(row || null);
     });
   });
 }
 
-function getUserByUsername(username) {
+export function dbAll(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
+    db.all(sql, params, (err, rows) => {
       if (err) return reject(err);
-      resolve(row || null);
+      resolve(rows || []);
     });
   });
 }
 
-function getUserById(id) {
+export function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => {
+    db.run(sql, params, function (err) {
       if (err) return reject(err);
-      resolve(row || null);
+      resolve({ id: this.lastID, changes: this.changes });
     });
   });
 }
-
-function getOrCreateChat(userId, peerId) {
-  return new Promise((resolve, reject) => {
-    const a = Math.min(userId, peerId);
-    const b = Math.max(userId, peerId);
-
-    db.get(
-      "SELECT * FROM chats WHERE user1_id = ? AND user2_id = ?",
-      [a, b],
-      (err, row) => {
-        if (err) return reject(err);
-        if (row) return resolve(row);
-
-        const now = Date.now();
-        db.run(
-          "INSERT INTO chats (user1_id, user2_id, created_at) VALUES (?, ?, ?)",
-          [a, b, now],
-          function (err2) {
-            if (err2) return reject(err2);
-            db.get(
-              "SELECT * FROM chats WHERE id = ?",
-              [this.lastID],
-              (err3, row2) => {
-                if (err3) return reject(err3);
-                resolve(row2);
-              }
-            );
-          }
-        );
-      }
-    );
-  });
-}
-
-module.exports = {
-  db,
-  getUserByPhone,
-  getUserByUsername,
-  getUserById,
-  getOrCreateChat
-};

@@ -1,192 +1,57 @@
-import { dom, normalizePhone, setupAuthScreen, resetAuthFields, updateAuthPhoneText } from "./ui.js";
-import { state, DEV_PHONE, DEV_USERNAME } from "./state.js";
-import { apiCheckUser, apiCheckUsername, apiLogin, apiRegister } from "./api.js";
-import { savePhone, saveUser, clearStorage } from "./storage.js";
-import { initMainScreen } from "./bootstrap.js";
-import { connectWs } from "./ws.js";
+// auth.js
+// Логика входа и регистрации
 
-let usernameTimer = null;
+import { apiCheckUser, apiLogin, apiRegister } from "./api.js";
+import { saveUser } from "./storage.js";
+import { state } from "./state.js";
+import { showScreen } from "./ui.js";
 
-export function initAuthHandlers() {
-  dom.countrySelect.addEventListener("change", () => {
-    const code = dom.countrySelect.selectedOptions[0].dataset.code;
-    dom.phoneCodeSpan.textContent = code;
-  });
+const phoneInput = document.getElementById("phoneInput");
+const btnAuthNext = document.getElementById("btnAuthNext");
 
-  dom.btnPhoneNext.addEventListener("click", onPhoneNext);
-  dom.backToPhone1.onclick = dom.backToPhone2.onclick = () => {
-    resetAuthFields();
-    clearStorage();
-    showPhoneScreen();
-  };
-
-  dom.regUsername.oninput = onUsernameInput;
-  dom.btnLogin.addEventListener("click", onLogin);
-  dom.btnRegister.addEventListener("click", onRegister);
+export function initAuth() {
+  btnAuthNext.onclick = onAuthNext;
 }
 
-function showPhoneScreen() {
-  state.fullPhone = "";
-  dom.phoneLocalInput.value = "";
-  dom.phoneCodeSpan.textContent =
-    dom.countrySelect.selectedOptions[0].dataset.code || "+7";
-  dom.authPassword.value = "";
-  resetAuthFields();
-  import("./ui.js").then(({ showScreen }) => showScreen("phone"));
-}
-
-async function onPhoneNext() {
-  const code = dom.countrySelect.selectedOptions[0].dataset.code;
-  const local = dom.phoneLocalInput.value.trim();
-  if (!local) return;
-
-  state.fullPhone = normalizePhone(code, local);
-  savePhone(state.fullPhone);
+async function onAuthNext() {
+  const phone = phoneInput.value.trim();
+  if (!phone) return alert("Введите номер телефона");
 
   try {
-    const { data } = await apiCheckUser(state.fullPhone);
-    setupAuthScreen(data && data.exists);
-    import("./ui.js").then(({ showScreen }) => showScreen("auth"));
-  } catch (e) {
-    console.error(e);
-    alert("Ошибка сервера");
-  }
-}
+    const check = await apiCheckUser(phone);
 
-function onUsernameInput() {
-  const u = dom.regUsername.value.trim();
+    if (check.exists) {
+      // Пользователь существует → логин
+      const password = prompt("Введите пароль:");
+      if (!password) return;
 
-  if (!u) {
-    dom.usernameStatus.textContent = "";
-    dom.usernameStatus.className = "";
-    return;
-  }
+      const res = await apiLogin(phone, password);
+      if (!res.user) return alert("Неверный пароль");
 
-  if (u === DEV_USERNAME && state.fullPhone === DEV_PHONE) {
-    dom.usernameStatus.textContent = "Уникальное имя разработчика";
-    dom.usernameStatus.className = "username-status-dev";
-    return;
-  }
+      saveUser(res.user);
+      state.user = res.user;
 
-  if (!/^[a-z0-9_]{5,32}$/i.test(u)) {
-    dom.usernameStatus.textContent =
-      "Спец-символы запрещены. Только латиница, цифры и _ (минимум 5 символов)";
-    dom.usernameStatus.className = "username-status-error";
-    return;
-  }
-
-  dom.usernameStatus.textContent = "Проверяем...";
-  dom.usernameStatus.className = "";
-  clearTimeout(usernameTimer);
-  usernameTimer = setTimeout(checkUsernameRemote, 300);
-}
-
-async function checkUsernameRemote() {
-  const u = dom.regUsername.value.trim();
-  if (!u) return;
-
-  try {
-    const { data } = await apiCheckUsername(u);
-
-    if (data.dev) {
-      dom.usernameStatus.textContent = "Уникальное имя разработчика";
-      dom.usernameStatus.className = "username-status-dev";
-    } else if (data.invalid && data.reason === "spec_symbols_forbidden") {
-      dom.usernameStatus.textContent =
-        "Спец-символы запрещены. Только латиница, цифры и _ (минимум 5 символов)";
-      dom.usernameStatus.className = "username-status-error";
-    } else if (data.available) {
-      dom.usernameStatus.textContent = "Имя свободно";
-      dom.usernameStatus.className = "username-status-ok";
+      showScreen("chats");
     } else {
-      dom.usernameStatus.textContent = "Имя занято";
-      dom.usernameStatus.className = "username-status-error";
-    }
-  } catch (e) {
-    console.error(e);
-    dom.usernameStatus.textContent = "Ошибка проверки";
-    dom.usernameStatus.className = "username-status-error";
-  }
-}
+      // Регистрация
+      const name = prompt("Ваше имя:");
+      const username = prompt("Юзернейм:");
+      const password = prompt("Пароль:");
 
-async function onLogin() {
-  const pass = dom.authPassword.value.trim();
-  if (!pass) return;
-
-  try {
-    const { ok, data } = await apiLogin(state.fullPhone, pass);
-    if (!ok) {
-      alert("Неверный пароль или номер");
-      return;
-    }
-
-    state.currentUser = data.user;
-    saveUser(state.currentUser);
-
-    await initMainScreen();
-    connectWs();
-    import("./ui.js").then(({ showScreen }) => showScreen("main"));
-  } catch (e) {
-    console.error(e);
-    alert("Ошибка сервера");
-  }
-}
-
-async function onRegister() {
-  const name = dom.regName.value.trim();
-  const username = dom.regUsername.value.trim();
-  const pass = dom.regPassword.value.trim();
-
-  if (!name || !username || !pass) {
-    alert("Заполните все поля");
-    return;
-  }
-
-  if (state.fullPhone === DEV_PHONE) {
-    if (username !== DEV_USERNAME) {
-      alert("Для этого номера доступно только имя " + DEV_USERNAME);
-      return;
-    }
-  } else {
-    if (!/^[a-z0-9_]{5,32}$/i.test(username)) {
-      alert(
-        "Спец-символы запрещены. Только латиница, цифры и _ (минимум 5 символов)"
-      );
-      return;
-    }
-  }
-
-  try {
-    const { ok, data } = await apiRegister({
-      phone: state.fullPhone,
-      name,
-      username,
-      password: pass
-    });
-
-    if (!ok) {
-      if (data?.error === "user_exists") {
-        alert("Аккаунт с таким номером уже существует, попробуйте войти");
-      } else if (data?.error === "username_taken") {
-        alert("Имя пользователя уже занято");
-      } else if (data?.error === "invalid_username") {
-        alert("Некорректный username");
-      } else if (data?.error === "dev_username_required") {
-        alert("Для этого номера доступно только имя " + DEV_USERNAME);
-      } else {
-        alert("Ошибка регистрации");
+      if (!name || !username || !password) {
+        return alert("Все поля обязательны");
       }
-      return;
+
+      const reg = await apiRegister({ phone, name, username, password });
+      if (!reg.user) return alert("Ошибка регистрации");
+
+      saveUser(reg.user);
+      state.user = reg.user;
+
+      showScreen("chats");
     }
-
-    state.currentUser = data.user;
-    saveUser(state.currentUser);
-
-    await initMainScreen();
-    connectWs();
-    import("./ui.js").then(({ showScreen }) => showScreen("main"));
   } catch (e) {
     console.error(e);
-    alert("Ошибка сервера");
+    alert("Ошибка соединения");
   }
 }
