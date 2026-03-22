@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <title>Pulse</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
-        html, body {
+        html,
+        body {
             margin: 0;
             padding: 0;
             height: 100%;
@@ -48,8 +50,15 @@
         }
 
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to   { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         .title {
@@ -121,7 +130,7 @@
         .country-picker-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
             justify-content: center;
             align-items: flex-end;
@@ -240,570 +249,633 @@
 </head>
 
 <body>
-<div class="app">
-    <div class="app-inner">
+    <div class="app">
+        <div class="app-inner">
 
-        <!-- ЭКРАН: ТЕЛЕФОН -->
-        <div class="screen" id="screen-phone">
-            <div class="title">Ваш номер телефона</div>
-            <div class="subtitle">Мы отправим код подтверждения.</div>
+            <!-- ЭКРАН: ТЕЛЕФОН -->
+            <div class="screen" id="screen-phone">
+                <div class="title">Ваш номер телефона</div>
+                <div class="subtitle">Мы отправим код подтверждения.</div>
 
-            <div class="label">Страна</div>
-            <button class="country-btn" id="countryBtn">
-                <span class="flag">🇷🇺</span>
-                <span class="code">+7</span>
-            </button>
+                <div class="label">Страна</div>
+                <button class="country-btn" id="countryBtn">
+                    <span class="flag">🇷🇺</span>
+                    <span class="code">+7</span>
+                </button>
 
-            <div class="label">Номер телефона</div>
-            <input class="input" id="phoneInput" placeholder="Введите 10 цифр" inputmode="numeric">
+                <div class="label">Номер телефона</div>
+                <input class="input" id="phoneInput" placeholder="Введите 10 цифр" inputmode="numeric">
 
-            <button class="primary-btn" id="phoneNextBtn" disabled>Продолжить</button>
+                <button class="primary-btn" id="phoneNextBtn" disabled>Продолжить</button>
+            </div>
+            <!-- ЭКРАН: ЛОГИН -->
+            <div class="screen" id="screen-login">
+                <div class="title">Вход в аккаунт</div>
+                <div class="subtitle">Введите номер телефона и пароль.</div>
+
+                <div class="label">Номер телефона</div>
+                <input class="input" id="loginPhone" placeholder="Введите 10 цифр" inputmode="numeric">
+
+                <div class="label">Пароль</div>
+                <input class="input" id="loginPassword" type="password" placeholder="Ваш пароль">
+
+                <button class="primary-btn" id="loginBtn">Войти</button>
+
+                <div style="margin-top:16px; opacity:0.8;">
+                    Нет аккаунта?
+                    <span class="link" onclick="Screens.show('screen-phone')">Создать</span>
+                </div>
+            </div>
+
+            <!-- ЭКРАН: ИМЯ + ЮЗЕРНЕЙМ -->
+            <div class="screen" id="screen-username">
+                <div class="top-bar">
+                    <div class="back-btn" id="usernameBackBtn">←</div>
+                    <div class="top-title">Регистрация</div>
+                </div>
+
+                <div class="subtitle">Как к вам обращаться и ваш юзернейм.</div>
+
+                <div class="label">Как вас зовут</div>
+                <input class="input" id="nameInput" placeholder="Например, Ярослав">
+
+                <div class="label">Юзернейм</div>
+                <input class="input" id="usernameInput" placeholder="@username">
+                <div id="usernameStatus" style="font-size:13px; margin-bottom:16px;"></div>
+
+                <button class="primary-btn" id="usernameNextBtn" disabled>Продолжить</button>
+            </div>
+
+            <!-- ЭКРАН: CLOUD PASSWORD -->
+            <div class="screen" id="screen-password">
+                <div class="top-bar">
+                    <div class="back-btn" id="passwordBackBtn">←</div>
+                    <div class="top-title">Пароль</div>
+                </div>
+
+                <div class="subtitle">
+                    Придумайте пароль для входа в аккаунт. Используйте буквы и цифры.
+                </div>
+
+                <div class="label">Пароль</div>
+                <div class="password-row">
+                    <input class="input" id="passwordInput" type="password" placeholder="Минимум 6 символов"
+                        style="margin-bottom:0;">
+                    <button class="password-toggle" id="passwordToggle">Показать</button>
+                </div>
+                <div class="password-strength" id="passwordStrength"></div>
+
+                <button class="primary-btn" id="passwordNextBtn" disabled>Продолжить</button>
+            </div>
+
+            <!-- ЭКРАН: ДОМАШНИЙ / ЧАТЫ -->
+            <div class="screen" id="screen-home">
+                <div class="top-title" id="homeTitle" style="margin-bottom:16px;">Pulse</div>
+
+                <input class="input" id="searchUsers" placeholder="Поиск людей по юзернейму"
+                    style="margin-bottom:16px;">
+
+                <div class="chat-list" id="chatList"></div>
+            </div>
+
+            <!-- ЭКРАН: ЧАТ -->
+            <div class="screen" id="screen-chat">
+                <div class="top-bar">
+                    <div class="back-btn" id="chatBackBtn">←</div>
+                    <div class="top-title" id="chatTitle">Чат</div>
+                </div>
+
+                <div id="chatMessages" style="flex:1; overflow-y:auto; padding-bottom:8px;"></div>
+
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <input class="input" id="chatInput" placeholder="Сообщение" style="margin-bottom:0;">
+                    <button class="primary-btn" id="chatSendBtn"
+                        style="flex:0 0 auto; width:auto; padding:0 18px;">➤</button>
+                </div>
+            </div>
+
         </div>
-
-        <!-- ЭКРАН: ИМЯ + ЮЗЕРНЕЙМ -->
-        <div class="screen" id="screen-username">
-            <div class="top-bar">
-                <div class="back-btn" id="usernameBackBtn">←</div>
-                <div class="top-title">Регистрация</div>
-            </div>
-
-            <div class="subtitle">Как к вам обращаться и ваш юзернейм.</div>
-
-            <div class="label">Как вас зовут</div>
-            <input class="input" id="nameInput" placeholder="Например, Ярослав">
-
-            <div class="label">Юзернейм</div>
-            <input class="input" id="usernameInput" placeholder="@username">
-            <div id="usernameStatus" style="font-size:13px; margin-bottom:16px;"></div>
-
-            <button class="primary-btn" id="usernameNextBtn" disabled>Продолжить</button>
-        </div>
-
-        <!-- ЭКРАН: CLOUD PASSWORD -->
-        <div class="screen" id="screen-password">
-            <div class="top-bar">
-                <div class="back-btn" id="passwordBackBtn">←</div>
-                <div class="top-title">Пароль</div>
-            </div>
-
-            <div class="subtitle">
-                Придумайте пароль для входа в аккаунт. Используйте буквы и цифры.
-            </div>
-
-            <div class="label">Пароль</div>
-            <div class="password-row">
-                <input class="input" id="passwordInput" type="password" placeholder="Минимум 6 символов" style="margin-bottom:0;">
-                <button class="password-toggle" id="passwordToggle">Показать</button>
-            </div>
-            <div class="password-strength" id="passwordStrength"></div>
-
-            <button class="primary-btn" id="passwordNextBtn" disabled>Продолжить</button>
-        </div>
-
-        <!-- ЭКРАН: ДОМАШНИЙ / ЧАТЫ -->
-        <div class="screen" id="screen-home">
-            <div class="top-title" id="homeTitle" style="margin-bottom:16px;">Pulse</div>
-
-            <input class="input" id="searchUsers" placeholder="Поиск людей по юзернейму" style="margin-bottom:16px;">
-
-            <div class="chat-list" id="chatList"></div>
-        </div>
-
-        <!-- ЭКРАН: ЧАТ -->
-        <div class="screen" id="screen-chat">
-            <div class="top-bar">
-                <div class="back-btn" id="chatBackBtn">←</div>
-                <div class="top-title" id="chatTitle">Чат</div>
-            </div>
-
-            <div id="chatMessages" style="flex:1; overflow-y:auto; padding-bottom:8px;"></div>
-
-            <div style="display:flex; gap:8px; margin-top:8px;">
-                <input class="input" id="chatInput" placeholder="Сообщение" style="margin-bottom:0;">
-                <button class="primary-btn" id="chatSendBtn" style="flex:0 0 auto; width:auto; padding:0 18px;">➤</button>
-            </div>
-        </div>
-
     </div>
-</div>
 
-<script>
-    // ===== ГЛОБАЛЬНОЕ СОСТОЯНИЕ / СЕССИЯ =====
-    const SPECIAL_PHONE = "9620491617";
+    <script>
+        // ===== ГЛОБАЛЬНОЕ СОСТОЯНИЕ / СЕССИЯ =====
+        const SPECIAL_PHONE = "9620491617";
 
-    const Session = {
-        user: null,
-        chats: [],
-        messages: {},
+        const Session = {
+            user: null,
+            chats: [],
+            messages: {},
 
-        load() {
-            try {
-                const u = localStorage.getItem("pulse_user");
-                const c = localStorage.getItem("pulse_chats");
-                const m = localStorage.getItem("pulse_messages");
-                this.user = u ? JSON.parse(u) : null;
-                this.chats = c ? JSON.parse(c) : [];
-                this.messages = m ? JSON.parse(m) : {};
-            } catch (e) {
-                this.user = null;
-                this.chats = [];
-                this.messages = {};
+            load() {
+                try {
+                    const u = localStorage.getItem("pulse_user");
+                    const c = localStorage.getItem("pulse_chats");
+                    const m = localStorage.getItem("pulse_messages");
+                    this.user = u ? JSON.parse(u) : null;
+                    this.chats = c ? JSON.parse(c) : [];
+                    this.messages = m ? JSON.parse(m) : {};
+                } catch (e) {
+                    this.user = null;
+                    this.chats = [];
+                    this.messages = {};
+                }
+            },
+            save() {
+                localStorage.setItem("pulse_user", JSON.stringify(this.user));
+                localStorage.setItem("pulse_chats", JSON.stringify(this.chats));
+                localStorage.setItem("pulse_messages", JSON.stringify(this.messages));
+            },
+            ensureSelfChat() {
+                if (!this.user) return;
+                let chat = this.chats.find(c => c.id === "self");
+                if (!chat) {
+                    chat = {
+                        id: "self",
+                        title: "Личный чат",
+                        username: this.user.username,
+                        lastMessage: ""
+                    };
+                    this.chats.push(chat);
+                    this.messages["self"] = this.messages["self"] || [];
+                }
             }
-        },
-        save() {
-            localStorage.setItem("pulse_user", JSON.stringify(this.user));
-            localStorage.setItem("pulse_chats", JSON.stringify(this.chats));
-            localStorage.setItem("pulse_messages", JSON.stringify(this.messages));
-        },
-        ensureSelfChat() {
-            if (!this.user) return;
-            let chat = this.chats.find(c => c.id === "self");
-            if (!chat) {
-                chat = {
-                    id: "self",
-                    title: "Личный чат",
-                    username: this.user.username,
-                    lastMessage: ""
-                };
-                this.chats.push(chat);
-                this.messages["self"] = this.messages["self"] || [];
+        };
+
+        Session.load();
+
+        // ===== РОУТЕР =====
+        const Screens = {
+            current: null,
+            show(id, params = {}) {
+                const all = document.querySelectorAll('.screen');
+                all.forEach(s => s.classList.remove('active', 'slide-in'));
+
+                const next = document.getElementById(id);
+                next.classList.add('active', 'slide-in');
+
+                this.current = next;
+
+                if (id === 'screen-phone') initPhoneScreen();
+                if (id === 'screen-login') initLoginScreen();
+                if (id === 'screen-username') initUsernameScreen(params);
+                if (id === 'screen-password') initPasswordScreen();
+                if (id === 'screen-home') initHomeScreen();
+                if (id === 'screen-chat') initChatScreen(params);
             }
-        }
-    };
+        };
 
-    Session.load();
+        // ===== СТРАНЫ =====
+        const countries = [
+            { flag: "🇷🇺", code: "+7", name: "Russia" },
+            { flag: "🇰🇿", code: "+7", name: "Kazakhstan" },
+            { flag: "🇺🇸", code: "+1", name: "United States" },
+            { flag: "🇩🇪", code: "+49", name: "Germany" },
+            { flag: "🇬🇧", code: "+44", name: "United Kingdom" },
+            { flag: "🇺🇦", code: "+380", name: "Ukraine" },
+            { flag: "🇫🇷", code: "+33", name: "France" },
+            { flag: "🇪🇸", code: "+34", name: "Spain" },
+            { flag: "🇮🇹", code: "+39", name: "Italy" },
+            { flag: "🇨🇦", code: "+1", name: "Canada" }
+        ];
 
-    // ===== РОУТЕР =====
-    const Screens = {
-        current: null,
-        show(id, params = {}) {
-            const all = document.querySelectorAll('.screen');
-            all.forEach(s => s.classList.remove('active', 'slide-in'));
+        function openCountryPickerOverlay(onSelect) {
+            const overlay = document.createElement('div');
+            overlay.className = 'country-picker-overlay';
 
-            const next = document.getElementById(id);
-            next.classList.add('active', 'slide-in');
-
-            this.current = next;
-
-            if (id === 'screen-phone') initPhoneScreen();
-            if (id === 'screen-username') initUsernameScreen(params);
-            if (id === 'screen-password') initPasswordScreen();
-            if (id === 'screen-home') initHomeScreen();
-            if (id === 'screen-chat') initChatScreen(params);
-        }
-    };
-
-    // ===== СТРАНЫ =====
-    const countries = [
-        { flag: "🇷🇺", code: "+7",  name: "Russia" },
-        { flag: "🇰🇿", code: "+7",  name: "Kazakhstan" },
-        { flag: "🇺🇸", code: "+1",  name: "United States" },
-        { flag: "🇩🇪", code: "+49", name: "Germany" },
-        { flag: "🇬🇧", code: "+44", name: "United Kingdom" },
-        { flag: "🇺🇦", code: "+380", name: "Ukraine" },
-        { flag: "🇫🇷", code: "+33", name: "France" },
-        { flag: "🇪🇸", code: "+34", name: "Spain" },
-        { flag: "🇮🇹", code: "+39", name: "Italy" },
-        { flag: "🇨🇦", code: "+1", name: "Canada" }
-    ];
-
-    function openCountryPickerOverlay(onSelect) {
-        const overlay = document.createElement('div');
-        overlay.className = 'country-picker-overlay';
-
-        const box = document.createElement('div');
-        box.className = 'country-picker';
-        box.innerHTML = `
+            const box = document.createElement('div');
+            box.className = 'country-picker';
+            box.innerHTML = `
             <input class="search" placeholder="Поиск страны">
             <div class="items"></div>
         `;
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
 
-        const items = box.querySelector('.items');
-        const search = box.querySelector('.search');
+            const items = box.querySelector('.items');
+            const search = box.querySelector('.search');
 
-        function render(filter = '') {
-            items.innerHTML = '';
-            countries
-                .filter(c => c.name.toLowerCase().includes(filter.toLowerCase()))
-                .forEach(c => {
-                    const el = document.createElement('div');
-                    el.className = 'country-item';
-                    el.innerHTML = `
+            function render(filter = '') {
+                items.innerHTML = '';
+                countries
+                    .filter(c => c.name.toLowerCase().includes(filter.toLowerCase()))
+                    .forEach(c => {
+                        const el = document.createElement('div');
+                        el.className = 'country-item';
+                        el.innerHTML = `
                         <span>${c.flag} ${c.name}</span>
                         <span class="code">${c.code}</span>
                     `;
-                    el.onclick = () => {
-                        onSelect(c);
-                        overlay.remove();
-                    };
-                    items.appendChild(el);
-                });
+                        el.onclick = () => {
+                            onSelect(c);
+                            overlay.remove();
+                        };
+                        items.appendChild(el);
+                    });
+            }
+
+            search.oninput = () => render(search.value);
+            render();
+
+            overlay.onclick = e => {
+                if (e.target === overlay) overlay.remove();
+            };
         }
 
-        search.oninput = () => render(search.value);
-        render();
+        // ===== МАСКА ТЕЛЕФОНА (РОВНО 10 ЦИФР) =====
+        function attachPhoneMask(input) {
+            if (input._maskAttached) return;
+            input._maskAttached = true;
 
-        overlay.onclick = e => {
-            if (e.target === overlay) overlay.remove();
-        };
-    }
-
-    // ===== МАСКА ТЕЛЕФОНА (РОВНО 10 ЦИФР) =====
-    function attachPhoneMask(input) {
-        if (input._maskAttached) return;
-        input._maskAttached = true;
-
-        input.addEventListener("input", () => {
-            let digits = input.value.replace(/\D/g, "");
-            if (digits.length > 10) digits = digits.slice(0, 10);
-            input.value = digits;
-        });
-    }
-
-    // ===== ЭКРАН: ТЕЛЕФОН =====
-    function initPhoneScreen() {
-        const countryBtn = document.getElementById('countryBtn');
-        const phoneInput = document.getElementById('phoneInput');
-        const nextBtn = document.getElementById('phoneNextBtn');
-
-        let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
-
-        countryBtn.onclick = () => {
-            openCountryPickerOverlay(c => {
-                currentCountry = c;
-                countryBtn.querySelector('.flag').textContent = c.flag;
-                countryBtn.querySelector('.code').textContent = c.code;
+            input.addEventListener("input", () => {
+                let digits = input.value.replace(/\D/g, "");
+                if (digits.length > 10) digits = digits.slice(0, 10);
+                input.value = digits;
             });
-        };
-
-        attachPhoneMask(phoneInput);
-
-        if (Session.user && Session.user.phone) {
-            phoneInput.value = Session.user.phone;
-            nextBtn.disabled = false;
-        } else {
-            phoneInput.value = "";
-            nextBtn.disabled = true;
         }
 
-        phoneInput.oninput = () => {
-            const digits = phoneInput.value.replace(/\D/g, '');
-            nextBtn.disabled = digits.length !== 10;
-        };
+        // ===== ЭКРАН: ТЕЛЕФОН =====
+        function initPhoneScreen() {
+            const countryBtn = document.getElementById('countryBtn');
+            const phoneInput = document.getElementById('phoneInput');
+            const nextBtn = document.getElementById('phoneNextBtn');
 
-        nextBtn.onclick = () => {
-            const digits = phoneInput.value.replace(/\D/g, '');
-            if (digits.length !== 10) return;
+            let currentCountry = { flag: '🇷🇺', code: '+7', name: 'Russia' };
 
-            if (!Session.user) Session.user = {};
-            Session.user.phone = digits;
-            Session.user.country = currentCountry;
-            Session.save();
+            countryBtn.onclick = () => {
+                openCountryPickerOverlay(c => {
+                    currentCountry = c;
+                    countryBtn.querySelector('.flag').textContent = c.flag;
+                    countryBtn.querySelector('.code').textContent = c.code;
+                });
+            };
 
-            Screens.show('screen-username', { phone: digits });
-        };
-    }
+            attachPhoneMask(phoneInput);
 
-    // ===== ЭКРАН: ИМЯ + ЮЗЕРНЕЙМ =====
-    function initUsernameScreen(params) {
-        const backBtn = document.getElementById('usernameBackBtn');
-        const nameInput = document.getElementById('nameInput');
-        const input = document.getElementById('usernameInput');
-        const status = document.getElementById('usernameStatus');
-        const nextBtn = document.getElementById('usernameNextBtn');
-
-        const phone = Session.user?.phone || params.phone;
-        const isSpecial = (phone === SPECIAL_PHONE);
-
-        nameInput.value = Session.user?.name || "";
-        input.value = Session.user?.username || "";
-        status.textContent = "";
-        nextBtn.disabled = true;
-
-        backBtn.onclick = () => Screens.show('screen-phone');
-
-        function validate() {
-            let name = nameInput.value.trim();
-            let v = input.value;
-
-            if (!isSpecial) {
-                v = v.replace(/[^a-zA-Z0-9_]/g, "");
-                input.value = v;
+            if (Session.user && Session.user.phone) {
+                phoneInput.value = Session.user.phone;
+                nextBtn.disabled = false;
             } else {
-                if (v.length > 32) v = v.slice(0, 32);
-                input.value = v;
-            }
-
-            if (name.length < 2 || v.length < 3) {
+                phoneInput.value = "";
                 nextBtn.disabled = true;
-                status.textContent = "";
-                return;
             }
 
-            if (!isSpecial) {
-                const banned = ["developer", "official", "admin", "support"];
-                if (banned.some(b => v.toLowerCase().includes(b))) {
-                    status.textContent = "Недоступно";
-                    status.style.color = "red";
-                    nextBtn.disabled = true;
+            phoneInput.oninput = () => {
+                const digits = phoneInput.value.replace(/\D/g, '');
+                nextBtn.disabled = digits.length !== 10;
+            };
+
+            nextBtn.onclick = () => {
+                const digits = phoneInput.value.replace(/\D/g, '');
+                if (digits.length !== 10) return;
+
+                if (!Session.user) Session.user = {};
+                Session.user.phone = digits;
+                Session.user.country = currentCountry;
+                Session.save();
+
+                Screens.show('screen-username', { phone: digits });
+            };
+        }
+
+        function initLoginScreen() {
+            const phoneInput = document.getElementById("loginPhone");
+            const passInput = document.getElementById("loginPassword");
+            const loginBtn = document.getElementById("loginBtn");
+
+            attachPhoneMask(phoneInput);
+
+            loginBtn.onclick = async () => {
+                const phone = phoneInput.value.trim();
+                const password = passInput.value.trim();
+
+                if (phone.length !== 10) {
+                    alert("Введите телефон");
                     return;
                 }
+
+                const res = await fetch("/api/users/login", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone, password })
+                }).then(r => r.json());
+
+                if (res.error === "not_found") {
+                    alert("Аккаунт не найден");
+                    return;
+                }
+                if (res.error === "wrong_password") {
+                    alert("Неверный пароль");
+                    return;
+                }
+
+                // УСПЕШНЫЙ ВХОД
+                Session.user = res.user;
+                Session.save();
+
+                Screens.show("screen-home");
+            };
+        }
+
+        // ===== ЭКРАН: ИМЯ + ЮЗЕРНЕЙМ =====
+        function initUsernameScreen(params) {
+            const backBtn = document.getElementById('usernameBackBtn');
+            const nameInput = document.getElementById('nameInput');
+            const input = document.getElementById('usernameInput');
+            const status = document.getElementById('usernameStatus');
+            const nextBtn = document.getElementById('usernameNextBtn');
+
+            const phone = Session.user?.phone || params.phone;
+            const isSpecial = (phone === SPECIAL_PHONE);
+
+            nameInput.value = Session.user?.name || "";
+            input.value = Session.user?.username || "";
+            status.textContent = "";
+            nextBtn.disabled = true;
+
+            backBtn.onclick = () => Screens.show('screen-phone');
+
+            function validate() {
+                let name = nameInput.value.trim();
+                let v = input.value;
+
+                if (!isSpecial) {
+                    v = v.replace(/[^a-zA-Z0-9_]/g, "");
+                    input.value = v;
+                } else {
+                    if (v.length > 32) v = v.slice(0, 32);
+                    input.value = v;
+                }
+
+                if (name.length < 2 || v.length < 3) {
+                    nextBtn.disabled = true;
+                    status.textContent = "";
+                    return;
+                }
+
+                if (!isSpecial) {
+                    const banned = ["developer", "official", "admin", "support"];
+                    if (banned.some(b => v.toLowerCase().includes(b))) {
+                        status.textContent = "Недоступно";
+                        status.style.color = "red";
+                        nextBtn.disabled = true;
+                        return;
+                    }
+                }
+
+                status.textContent = isSpecial
+                    ? "Уникальный режим (золотой юзер)"
+                    : "Имя доступно";
+                status.style.color = isSpecial ? "#ffd54a" : "green";
+                nextBtn.disabled = false;
             }
 
-            status.textContent = isSpecial
-                ? "Уникальный режим (золотой юзер)"
-                : "Имя доступно";
-            status.style.color = isSpecial ? "#ffd54a" : "green";
-            nextBtn.disabled = false;
+            nameInput.oninput = validate;
+            input.oninput = validate;
+
+            validate();
+
+            nextBtn.onclick = () => {
+                const name = nameInput.value.trim();
+                const username = input.value.trim();
+                if (name.length < 2 || username.length < 3) return;
+
+                Session.user = Session.user || {};
+                Session.user.name = name;
+                Session.user.username = username;
+                Session.user.isSpecial = (Session.user.phone === SPECIAL_PHONE);
+                Session.save();
+
+                Screens.show('screen-password');
+            };
         }
 
-        nameInput.oninput = validate;
-        input.oninput = validate;
+        // ===== ЭКРАН: ПАРОЛЬ (CLOUD PASSWORD) =====
+        function initPasswordScreen() {
+            const backBtn = document.getElementById('passwordBackBtn');
+            const input = document.getElementById('passwordInput');
+            const toggle = document.getElementById('passwordToggle');
+            const strengthEl = document.getElementById('passwordStrength');
+            const nextBtn = document.getElementById('passwordNextBtn');
 
-        validate();
+            input.value = "";
+            strengthEl.textContent = "";
+            nextBtn.disabled = true;
+            input.type = "password";
+            toggle.textContent = "Показать";
 
-        nextBtn.onclick = () => {
-            const name = nameInput.value.trim();
-            const username = input.value.trim();
-            if (name.length < 2 || username.length < 3) return;
+            backBtn.onclick = () => Screens.show('screen-username');
 
-            Session.user = Session.user || {};
-            Session.user.name = name;
-            Session.user.username = username;
-            Session.user.isSpecial = (Session.user.phone === SPECIAL_PHONE);
-            Session.save();
+            toggle.onclick = () => {
+                if (input.type === "password") {
+                    input.type = "text";
+                    toggle.textContent = "Скрыть";
+                } else {
+                    input.type = "password";
+                    toggle.textContent = "Показать";
+                }
+            };
 
-            Screens.show('screen-password');
-        };
-    }
+            function calcStrength(pwd) {
+                if (pwd.length < 6) return { label: "Слишком короткий", color: "red", ok: false };
 
-    // ===== ЭКРАН: ПАРОЛЬ (CLOUD PASSWORD) =====
-    function initPasswordScreen() {
-        const backBtn = document.getElementById('passwordBackBtn');
-        const input = document.getElementById('passwordInput');
-        const toggle = document.getElementById('passwordToggle');
-        const strengthEl = document.getElementById('passwordStrength');
-        const nextBtn = document.getElementById('passwordNextBtn');
+                let score = 0;
+                if (/[a-z]/.test(pwd)) score++;
+                if (/[A-Z]/.test(pwd)) score++;
+                if (/[0-9]/.test(pwd)) score++;
+                if (/[^a-zA-Z0-9]/.test(pwd)) score++;
 
-        input.value = "";
-        strengthEl.textContent = "";
-        nextBtn.disabled = true;
-        input.type = "password";
-        toggle.textContent = "Показать";
-
-        backBtn.onclick = () => Screens.show('screen-username');
-
-        toggle.onclick = () => {
-            if (input.type === "password") {
-                input.type = "text";
-                toggle.textContent = "Скрыть";
-            } else {
-                input.type = "password";
-                toggle.textContent = "Показать";
+                if (score <= 1) return { label: "Слабый пароль", color: "orange", ok: true };
+                if (score === 2) return { label: "Нормальный пароль", color: "yellow", ok: true };
+                return { label: "Сильный пароль", color: "lightgreen", ok: true };
             }
-        };
 
-        function calcStrength(pwd) {
-            if (pwd.length < 6) return { label: "Слишком короткий", color: "red", ok: false };
+            input.oninput = () => {
+                const pwd = input.value;
+                const s = calcStrength(pwd);
+                strengthEl.textContent = s.label;
+                strengthEl.style.color = s.color;
+                nextBtn.disabled = !s.ok;
+            };
 
-            let score = 0;
-            if (/[a-z]/.test(pwd)) score++;
-            if (/[A-Z]/.test(pwd)) score++;
-            if (/[0-9]/.test(pwd)) score++;
-            if (/[^a-zA-Z0-9]/.test(pwd)) score++;
+            nextBtn.onclick = () => {
+                const pwd = input.value;
+                const s = calcStrength(pwd);
+                if (!s.ok) return;
 
-            if (score <= 1) return { label: "Слабый пароль", color: "orange", ok: true };
-            if (score === 2) return { label: "Нормальный пароль", color: "yellow", ok: true };
-            return { label: "Сильный пароль", color: "lightgreen", ok: true };
+                Session.user = Session.user || {};
+                Session.user.password = pwd;
+                Session.save();
+
+                Session.ensureSelfChat();
+                Session.save();
+
+                Screens.show('screen-home');
+            };
         }
 
-        input.oninput = () => {
-            const pwd = input.value;
-            const s = calcStrength(pwd);
-            strengthEl.textContent = s.label;
-            strengthEl.style.color = s.color;
-            nextBtn.disabled = !s.ok;
-        };
+        // ===== ЭКРАН: HOME / ЧАТЫ =====
+        function initHomeScreen() {
+            const titleEl = document.getElementById('homeTitle');
+            const searchBox = document.getElementById('searchUsers');
+            const list = document.getElementById('chatList');
 
-        nextBtn.onclick = () => {
-            const pwd = input.value;
-            const s = calcStrength(pwd);
-            if (!s.ok) return;
-
-            Session.user = Session.user || {};
-            Session.user.password = pwd;
-            Session.save();
-
-            Session.ensureSelfChat();
-            Session.save();
-
-            Screens.show('screen-home');
-        };
-    }
-
-    // ===== ЭКРАН: HOME / ЧАТЫ =====
-    function initHomeScreen() {
-        const titleEl = document.getElementById('homeTitle');
-        const searchBox = document.getElementById('searchUsers');
-        const list = document.getElementById('chatList');
-
-        const user = Session.user;
-        if (!user) {
-            Screens.show('screen-phone');
-            return;
-        }
-
-        const uname = user.username || "user";
-        const isSpecial = !!user.isSpecial;
-
-        titleEl.innerHTML = `Pulse <span class="${isSpecial ? 'gold' : ''}" style="opacity:0.8; font-size:14px;">| @${uname}</span>`;
-
-        searchBox.value = "";
-
-        searchBox.oninput = () => {
-            const q = searchBox.value.trim().toLowerCase();
-            list.innerHTML = "";
-
-            if (!q) {
-                renderChats();
+            const user = Session.user;
+            if (!user) {
+                Screens.show('screen-phone');
                 return;
             }
 
-            // Поиск только самого себя
-            if (uname.toLowerCase().includes(q)) {
-                const el = document.createElement('div');
-                el.className = "chat-item";
-                el.innerHTML = `
+            const uname = user.username || "user";
+            const isSpecial = !!user.isSpecial;
+
+            titleEl.innerHTML = `Pulse <span class="${isSpecial ? 'gold' : ''}" style="opacity:0.8; font-size:14px;">| @${uname}</span>`;
+
+            searchBox.value = "";
+
+            searchBox.oninput = () => {
+                const q = searchBox.value.trim().toLowerCase();
+                list.innerHTML = "";
+
+                if (!q) {
+                    renderChats();
+                    return;
+                }
+
+                // Поиск только самого себя
+                if (uname.toLowerCase().includes(q)) {
+                    const el = document.createElement('div');
+                    el.className = "chat-item";
+                    el.innerHTML = `
                     <div class="chat-item-title ${isSpecial ? 'gold' : ''}">@${uname}</div>
                     <div class="chat-item-last" style="opacity:0.6;">Личный чат</div>
                 `;
-                el.onclick = () => {
-                    Session.ensureSelfChat();
-                    Session.save();
-                    Screens.show('screen-chat', { chatId: "self" });
-                };
-                list.appendChild(el);
-            } else {
-                list.innerHTML = `<div style="opacity:0.6; padding:12px;">Никого не найдено</div>`;
-            }
-        };
+                    el.onclick = () => {
+                        Session.ensureSelfChat();
+                        Session.save();
+                        Screens.show('screen-chat', { chatId: "self" });
+                    };
+                    list.appendChild(el);
+                } else {
+                    list.innerHTML = `<div style="opacity:0.6; padding:12px;">Никого не найдено</div>`;
+                }
+            };
 
-        function renderChats() {
-            list.innerHTML = "";
-            Session.ensureSelfChat();
-            Session.save();
+            function renderChats() {
+                list.innerHTML = "";
+                Session.ensureSelfChat();
+                Session.save();
 
-            if (!Session.chats.length) {
-                list.innerHTML = `<div style="opacity:0.6; padding:12px;">У вас пока нет чатов</div>`;
-                return;
-            }
+                if (!Session.chats.length) {
+                    list.innerHTML = `<div style="opacity:0.6; padding:12px;">У вас пока нет чатов</div>`;
+                    return;
+                }
 
-            Session.chats.forEach(chat => {
-                const el = document.createElement('div');
-                el.className = "chat-item";
-                el.innerHTML = `
+                Session.chats.forEach(chat => {
+                    const el = document.createElement('div');
+                    el.className = "chat-item";
+                    el.innerHTML = `
                     <div class="chat-item-title">${chat.title}</div>
                     <div class="chat-item-last">${chat.lastMessage || ""}</div>
                 `;
-                el.onclick = () => {
-                    Screens.show('screen-chat', { chatId: chat.id });
-                };
-                list.appendChild(el);
-            });
+                    el.onclick = () => {
+                        Screens.show('screen-chat', { chatId: chat.id });
+                    };
+                    list.appendChild(el);
+                });
+            }
+
+            renderChats();
         }
 
-        renderChats();
-    }
+        // ===== ЭКРАН: ЧАТ =====
+        function initChatScreen(params) {
+            const backBtn = document.getElementById('chatBackBtn');
+            const titleEl = document.getElementById('chatTitle');
+            const messagesEl = document.getElementById('chatMessages');
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('chatSendBtn');
 
-    // ===== ЭКРАН: ЧАТ =====
-    function initChatScreen(params) {
-        const backBtn = document.getElementById('chatBackBtn');
-        const titleEl = document.getElementById('chatTitle');
-        const messagesEl = document.getElementById('chatMessages');
-        const input = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('chatSendBtn');
+            const user = Session.user;
+            if (!user) {
+                Screens.show('screen-phone');
+                return;
+            }
 
-        const user = Session.user;
-        if (!user) {
-            Screens.show('screen-phone');
-            return;
-        }
+            const chatId = params.chatId || "self";
+            const chat = Session.chats.find(c => c.id === chatId);
+            if (!chat) {
+                Screens.show('screen-home');
+                return;
+            }
 
-        const chatId = params.chatId || "self";
-        const chat = Session.chats.find(c => c.id === chatId);
-        if (!chat) {
-            Screens.show('screen-home');
-            return;
-        }
+            const isSpecial = !!user.isSpecial;
+            const uname = user.username || "user";
 
-        const isSpecial = !!user.isSpecial;
-        const uname = user.username || "user";
+            titleEl.innerHTML = `${chat.title} ${isSpecial ? '<span class="gold" style="font-size:14px; opacity:0.8;">(@' + uname + ')</span>' : ''}`;
 
-        titleEl.innerHTML = `${chat.title} ${isSpecial ? '<span class="gold" style="font-size:14px; opacity:0.8;">(@'+uname+')</span>' : ''}`;
+            backBtn.onclick = () => Screens.show('screen-home');
 
-        backBtn.onclick = () => Screens.show('screen-home');
-
-        messagesEl.innerHTML = "";
-        const msgs = Session.messages[chatId] || [];
-        msgs.forEach(m => {
-            const el = document.createElement('div');
-            el.style.margin = "6px 0";
-            el.style.fontSize = "14px";
-            el.style.textAlign = m.from === "me" ? "right" : "left";
-            el.innerHTML = `
+            messagesEl.innerHTML = "";
+            const msgs = Session.messages[chatId] || [];
+            msgs.forEach(m => {
+                const el = document.createElement('div');
+                el.style.margin = "6px 0";
+                el.style.fontSize = "14px";
+                el.style.textAlign = m.from === "me" ? "right" : "left";
+                el.innerHTML = `
                 <span style="opacity:0.7; font-size:12px;">
                     ${m.from === "me"
-                        ? (isSpecial ? '<span class="gold">@'+uname+'</span>' : '@'+uname)
-                        : '@'+chat.username}
+                        ? (isSpecial ? '<span class="gold">@' + uname + '</span>' : '@' + uname)
+                        : '@' + chat.username}
                 </span><br>
                 ${m.text}
             `;
-            messagesEl.appendChild(el);
-        });
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+                messagesEl.appendChild(el);
+            });
+            messagesEl.scrollTop = messagesEl.scrollHeight;
 
-        input.value = "";
+            input.value = "";
 
-        sendBtn.onclick = () => {
-            const text = input.value.trim();
-            if (!text) return;
+            sendBtn.onclick = () => {
+                const text = input.value.trim();
+                if (!text) return;
 
-            const msg = { from: "me", text };
-            Session.messages[chatId] = Session.messages[chatId] || [];
-            Session.messages[chatId].push(msg);
-            chat.lastMessage = text;
-            Session.save();
+                const msg = { from: "me", text };
+                Session.messages[chatId] = Session.messages[chatId] || [];
+                Session.messages[chatId].push(msg);
+                chat.lastMessage = text;
+                Session.save();
 
-            const el = document.createElement('div');
-            el.style.margin = "6px 0";
-            el.style.fontSize = "14px";
-            el.style.textAlign = "right";
-            el.innerHTML = `
+                const el = document.createElement('div');
+                el.style.margin = "6px 0";
+                el.style.fontSize = "14px";
+                el.style.textAlign = "right";
+                el.innerHTML = `
                 <span style="opacity:0.7; font-size:12px;">
-                    ${isSpecial ? '<span class="gold">@'+uname+'</span>' : '@'+uname}
+                    ${isSpecial ? '<span class="gold">@' + uname + '</span>' : '@' + uname}
                 </span><br>
                 ${text}
             `;
-            messagesEl.appendChild(el);
+                messagesEl.appendChild(el);
 
-            input.value = "";
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        };
-    }
+                input.value = "";
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            };
+        }
 
-    // ===== СТАРТ =====
-    if (Session.user && Session.user.phone && Session.user.username && Session.user.password) {
-        Session.ensureSelfChat();
-        Session.save();
-        Screens.show('screen-home');
-    } else if (Session.user && Session.user.phone) {
-        Screens.show('screen-username', { phone: Session.user.phone });
-    } else {
-        Screens.show('screen-phone');
-    }
-</script>
+        // ===== СТАРТ =====
+        if (Session.user && Session.user.phone && Session.user.username && Session.user.password) {
+            Session.ensureSelfChat();
+            Session.save();
+            Screens.show('screen-home');
+        } else if (Session.user && Session.user.phone) {
+            Screens.show('screen-username', { phone: Session.user.phone });
+        } else {
+            Screens.show('screen-phone');
+        }
+    </script>
 
 </body>
+
 </html>
