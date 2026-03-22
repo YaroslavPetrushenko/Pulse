@@ -45,7 +45,6 @@ async function checkUsername(req, res) {
 }
 
 // POST /api/register
-// body: { phone, name, username, password }
 async function register(req, res) {
   try {
     const { phone, name, username, password } = req.body || {};
@@ -80,7 +79,6 @@ async function register(req, res) {
     // создаём личный чат
     await ensureSelfChat(user.id);
 
-    // сессия
     req.session.userId = user.id;
 
     res.json(user);
@@ -91,7 +89,6 @@ async function register(req, res) {
 }
 
 // POST /api/login
-// body: { phone, password }
 async function login(req, res) {
   try {
     const { phone, password } = req.body || {};

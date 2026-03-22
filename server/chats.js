@@ -3,7 +3,7 @@
 
 const db = require("./db");
 
-// Личный чат всегда один на пользователя
+// Личный чат всегда один
 async function ensureSelfChat(userId) {
   const existing = await db.get(
     "SELECT id FROM chats WHERE owner_id = ? AND is_self = 1",
@@ -13,18 +13,17 @@ async function ensureSelfChat(userId) {
 
   const res = await db.run(
     "INSERT INTO chats (owner_id, peer_id, is_self, title) VALUES (?, NULL, 1, ?)",
-    [userId, "Личный чат"]
+    [userId, "Чат"] // ← НЕ «ЛИЧНЫЙ ЧАТ», а просто ЧАТ
   );
   return res.lastID;
 }
 
 // GET /api/chats
-// Возвращает все чаты пользователя, включая личный
 async function getChats(req, res) {
   try {
     const userId = req.user.id;
 
-    // гарантируем, что личный чат есть
+    // гарантируем личный чат
     await ensureSelfChat(userId);
 
     const rows = await db.all(
@@ -45,7 +44,6 @@ async function getChats(req, res) {
 }
 
 // POST /api/chats/with { peerId }
-// Создаёт или возвращает существующий чат с пользователем
 async function createOrGetChatWith(req, res) {
   try {
     const userId = req.user.id;
@@ -55,7 +53,7 @@ async function createOrGetChatWith(req, res) {
       return res.status(400).json({ error: "peer_required" });
     }
 
-    // Личный чат
+    // Чат с самим собой
     if (Number(peerId) === Number(userId)) {
       const id = await ensureSelfChat(userId);
       const chat = await db.get(
@@ -65,7 +63,7 @@ async function createOrGetChatWith(req, res) {
       return res.json(chat);
     }
 
-    // Пытаемся найти уже существующий
+    // Ищем существующий
     let chat = await db.get(
       `
       SELECT id, owner_id, peer_id, is_self, title
@@ -75,10 +73,11 @@ async function createOrGetChatWith(req, res) {
       [userId, peerId]
     );
 
+    // Если нет — создаём
     if (!chat) {
       const resDb = await db.run(
         "INSERT INTO chats (owner_id, peer_id, is_self, title) VALUES (?, ?, 0, ?)",
-        [userId, peerId, "Диалог"]
+        [userId, peerId, "Чат"]
       );
       chat = await db.get(
         "SELECT id, owner_id, peer_id, is_self, title FROM chats WHERE id = ?",
