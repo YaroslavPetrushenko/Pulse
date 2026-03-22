@@ -701,12 +701,19 @@
         }
 
         // ===== ЭКРАН: ПАРОЛЬ (РЕГИСТРАЦИЯ) =====
+        // ===== ЭКРАН: ПАРОЛЬ (РЕГИСТРАЦИЯ) =====
         function initPasswordScreen() {
             const backBtn = document.getElementById('passwordBackBtn');
             const input = document.getElementById('passwordInput');
             const toggle = document.getElementById('passwordToggle');
             const strengthEl = document.getElementById('passwordStrength');
             const nextBtn = document.getElementById('passwordNextBtn');
+
+            // если какого-то элемента нет — сразу выходим
+            if (!backBtn || !input || !toggle || !strengthEl || !nextBtn) {
+                console.error("❌ Ошибка: элементы пароля не найдены");
+                return;
+            }
 
             input.value = "";
             strengthEl.textContent = "";
@@ -753,7 +760,6 @@
                 const s = calcStrength(pwd);
                 if (!s.ok) return;
 
-                Session.user = Session.user || {};
                 Session.user.password = pwd;
                 Session.save();
 
@@ -777,11 +783,6 @@
                     return;
                 }
 
-                if (!res.user) {
-                    alert("Ошибка регистрации");
-                    return;
-                }
-
                 Session.user = res.user;
                 Session.ensureSelfChat();
                 Session.save();
@@ -789,6 +790,7 @@
                 Screens.show('screen-home');
             };
         }
+
 
         // ===== ЭКРАН: HOME / ЧАТЫ =====
         function initHomeScreen() {
