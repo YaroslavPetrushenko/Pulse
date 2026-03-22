@@ -12,11 +12,12 @@
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
     "bcryptjs": "^2.4.3",
-    "express": "^4.22.1",
-    "sqlite3": "^5.1.7",
-    "ws": "^8.19.0",
-    "express-session": "^1.17.3",
+    "connect-sqlite3": "^0.9.16",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "express": "^4.22.1",
+    "express-session": "^1.17.3",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.19.0"
   }
 }
